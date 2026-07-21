@@ -1,0 +1,17 @@
+# Ignore notebooks from GitHub language statistics only
+*.ipynb linguist-vendored
+
+# Ignore data/model/output files from language statistics
+data/** linguist-vendored
+models/** linguist-vendored
+outputs/** linguist-generated
+artifacts/** linguist-generated
+reports/** linguist-generated
+
+# Ignore common large/generated files from language statistics
+*.csv linguist-vendored
+*.joblib linguist-vendored
+*.json linguist-vendored
+*.png linguist-generated
+*.jpg linguist-generated
+*.jpeg linguist-generated
