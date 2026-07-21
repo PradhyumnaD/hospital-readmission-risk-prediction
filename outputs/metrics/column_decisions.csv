@@ -1,0 +1,15 @@
+column,decision,reason
+encounter_id,Drop from model,Unique identifier
+patient_nbr,Use only for patient-level split,Prevents patient leakage
+weight,Drop,96.86% missing
+payer_code,Likely drop,39.56% missing and limited clinical usefulness
+examide,Drop,Constant column
+citoglipton,Drop,Constant column
+A1Cresult,Keep and label missing as Not measured,Test result may be informative
+max_glu_serum,Keep and label missing as Not measured,Test result may be informative
+medical_specialty,"Keep, fill Unknown, group rare categories",Potentially useful but high missingness and cardinality
+diag_1,Keep but group ICD codes,High cardinality diagnosis codes
+diag_2,Keep but group ICD codes,High cardinality diagnosis codes
+diag_3,Keep but group ICD codes,High cardinality diagnosis codes
+admission_type_id,Replace with admission_type_group,Readable grouped categories created
+admission_source_id,Replace with admission_source_group,Readable grouped categories created

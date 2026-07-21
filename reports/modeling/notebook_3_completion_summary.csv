@@ -1,0 +1,20 @@
+check,result,status
+Full dataset rows,99343,Passed
+Unique patients,69990,Passed
+Raw predictors,43,Passed
+Numeric predictors,8,Passed
+Categorical predictors,35,Passed
+Transformed predictors,179,Passed
+Train encounters,69467,Passed
+Validation encounters,14900,Passed
+Test encounters,14976,Passed
+Train patients,48993,Passed
+Validation patients,10498,Passed
+Test patients,10499,Passed
+Train positive rate,11.4241%,Passed
+Validation positive rate,11.2752%,Passed
+Test positive rate,11.3381%,Passed
+Patient overlap,0,Passed
+Missing raw values,0,Passed
+Non-finite transformed values,0,Passed
+Saved output files,6,Passed

@@ -1,0 +1,57 @@
+{
+    "notebook": "05_candidate_models.ipynb",
+    "created_at": "2026-07-20T19:46:36",
+    "target_column": "readmitted_30",
+    "group_column": "patient_nbr",
+    "raw_feature_count": 43,
+    "transformed_feature_count": 179,
+    "train_encounters": 69467,
+    "validation_encounters": 14900,
+    "reserved_test_encounters": 14976,
+    "test_set_used": false,
+    "baseline_reference_file": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\metrics\\notebook_4_baseline_model_comparison.csv",
+    "candidate_models_evaluated": [
+        "Random Forest - Class Weighted",
+        "Extra Trees - Class Weighted",
+        "HistGradientBoosting - Balanced Weights",
+        "XGBoost - Scale Pos Weight",
+        "CatBoost - Native Categoricals"
+    ],
+    "all_models_compared": [
+        "XGBoost - Scale Pos Weight",
+        "CatBoost - Native Categoricals",
+        "HistGradientBoosting - Balanced Weights",
+        "Random Forest - Class Weighted",
+        "Logistic Regression - Class Weighted",
+        "Decision Tree - Class Weighted",
+        "Extra Trees - Class Weighted",
+        "Logistic Regression - Unweighted",
+        "Dummy - Most Frequent Class"
+    ],
+    "leading_candidate_model": "XGBoost - Scale Pos Weight",
+    "models_to_carry_forward": [
+        "XGBoost - Scale Pos Weight",
+        "CatBoost - Native Categoricals",
+        "HistGradientBoosting - Balanced Weights"
+    ],
+    "selection_basis": [
+        "balanced_accuracy",
+        "recall_sensitivity",
+        "f1_score",
+        "roc_auc",
+        "pr_auc",
+        "false_negatives",
+        "false_positives"
+    ],
+    "saved_files": {
+        "candidate_comparison_table": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\metrics\\notebook_5_candidate_model_comparison.csv",
+        "candidate_roc_curve": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_5_candidate_roc_curves.png",
+        "candidate_precision_recall_curve": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_5_candidate_precision_recall_curves.png",
+        "candidate_metric_comparison_chart": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_5_candidate_metric_comparison.png",
+        "random_forest_model": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_5_random_forest_class_weighted.joblib",
+        "extra_trees_model": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_5_extra_trees_class_weighted.joblib",
+        "hist_gradient_boosting_model": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_5_hist_gradient_boosting_balanced.joblib",
+        "xgboost_model": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_5_xgboost_scale_pos_weight.json",
+        "catboost_model": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_5_catboost_native_categoricals.cbm"
+    }
+}

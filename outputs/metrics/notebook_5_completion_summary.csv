@@ -1,0 +1,2 @@
+notebook,status,candidate_models_evaluated,total_models_compared,leading_candidate_model,leading_accuracy,leading_balanced_accuracy,leading_precision,leading_recall,leading_f1_score,leading_roc_auc,leading_pr_auc,test_set_used,models_to_carry_forward
+05_candidate_models.ipynb,Complete,5,9,XGBoost - Scale Pos Weight,0.6581208053691275,0.6306750234132987,0.1847063169560399,0.5952380952380952,0.28192839018889204,0.6800352775376414,0.23732451806246907,False,XGBoost - Scale Pos Weight; CatBoost - Native Categoricals; HistGradientBoosting - Balanced Weights

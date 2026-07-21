@@ -1,0 +1,2 @@
+notebook,status,models_evaluated,leading_baseline,leading_balanced_accuracy,leading_recall,leading_f1_score,leading_roc_auc,leading_pr_auc,test_set_used
+04_baseline_models.ipynb,Complete,4,Logistic Regression - Class Weighted,0.62010932209495,0.555952380952381,0.2751915144372422,0.6693989986312225,0.2259181883594484,False

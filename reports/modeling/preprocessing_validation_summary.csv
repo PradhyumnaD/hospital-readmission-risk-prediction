@@ -1,0 +1,4 @@
+split,rows,transformed_features,sparse_matrix,density_pct,contains_non_finite_values
+Train,69467,179,True,24.022346368715084,False
+Validation,14900,179,True,24.022346368715084,False
+Test,14976,179,True,24.022346368715084,False

@@ -1,0 +1,44 @@
+{
+    "notebook": "04_baseline_models.ipynb",
+    "created_at": "2026-07-20T19:00:31",
+    "target_column": "readmitted_30",
+    "group_column": "patient_nbr",
+    "identifier_columns": [
+        "encounter_id",
+        "patient_nbr"
+    ],
+    "numeric_feature_count": 8,
+    "categorical_feature_count": 35,
+    "raw_feature_count": 43,
+    "transformed_feature_count": 179,
+    "rare_category_min_frequency": 10,
+    "train_encounters": 69467,
+    "validation_encounters": 14900,
+    "reserved_test_encounters": 14976,
+    "models_evaluated": [
+        "Logistic Regression - Class Weighted",
+        "Decision Tree - Class Weighted",
+        "Logistic Regression - Unweighted",
+        "Dummy - Most Frequent Class"
+    ],
+    "provisional_leading_baseline": "Logistic Regression - Class Weighted",
+    "selection_basis": [
+        "balanced_accuracy",
+        "f1_score",
+        "roc_auc",
+        "pr_auc",
+        "recall_sensitivity"
+    ],
+    "test_set_used": false,
+    "saved_files": {
+        "fitted_preprocessor": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_fitted_preprocessor.joblib",
+        "dummy_classifier": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_dummy_classifier.joblib",
+        "unweighted_logistic_regression": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_logistic_unweighted.joblib",
+        "class_weighted_logistic_regression": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_logistic_class_weighted.joblib",
+        "class_weighted_decision_tree": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_decision_tree_class_weighted.joblib",
+        "comparison_table": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\metrics\\notebook_4_baseline_model_comparison.csv",
+        "roc_curve": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_4_baseline_roc_curves.png",
+        "precision_recall_curve": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_4_baseline_precision_recall_curves.png",
+        "metric_comparison_chart": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\outputs\\figures\\notebook_4_baseline_metric_comparison.png"
+    }
+}

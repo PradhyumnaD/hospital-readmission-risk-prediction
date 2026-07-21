@@ -1,0 +1,2 @@
+notebook,status,selected_model_name,selected_model_type,selected_threshold,selected_accuracy,selected_balanced_accuracy,selected_precision,selected_recall,selected_specificity,selected_f1_score,selected_roc_auc,selected_pr_auc,test_set_used
+06B_advanced_modeling.ipynb,Complete,Ensemble_05_Weighted_All_Advanced,Weighted soft voting ensemble,0.5,0.6653020134228188,0.6318641488365392,0.18713339640491958,0.5886904761904762,0.6750378214826022,0.28399138549892317,0.6819163334774152,0.24386922085356375,False
