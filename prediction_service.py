@@ -4,7 +4,9 @@ import json
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
+import xgboost as xgb
 
 # Required when loading the saved preprocessor.
 from custom_transformers import RareCategoryGrouper
@@ -434,3 +436,363 @@ def predict_readmission_batch(
     )
 
     return results
+
+
+# ---------------------------------------------------------
+# Record-level explanation helpers
+# ---------------------------------------------------------
+FEATURE_LABELS = {
+    "discharge_disposition_id": "Discharge Disposition",
+    "medical_specialty_group": "Medical Specialty",
+    "diag_1_group": "Primary Diagnosis Group",
+    "diag_2_group": "Secondary Diagnosis Group",
+    "diag_3_group": "Additional Diagnosis Group",
+    "number_inpatient": "Previous Inpatient Visits",
+    "number_outpatient": "Previous Outpatient Visits",
+    "number_emergency": "Previous Emergency Visits",
+    "time_in_hospital": "Time in Hospital",
+    "num_lab_procedures": "Laboratory Procedures",
+    "num_procedures": "Procedures",
+    "num_medications": "Medications",
+    "number_diagnoses": "Number of Diagnoses",
+    "A1Cresult": "A1C Test Result",
+    "max_glu_serum": "Maximum Glucose Serum Result",
+    "diabetesMed": "Diabetes Medication",
+}
+
+
+def _sigmoid(values: np.ndarray) -> np.ndarray:
+    """Convert XGBoost raw margins into probabilities."""
+
+    clipped_values = np.clip(values, -709, 709)
+    return 1.0 / (1.0 + np.exp(-clipped_values))
+
+
+def _format_feature_name(feature_name: str) -> str:
+    """Convert an internal predictor name into a readable label."""
+
+    if feature_name in FEATURE_LABELS:
+        return FEATURE_LABELS[feature_name]
+
+    return (
+        str(feature_name)
+        .replace("_", " ")
+        .replace("-", " ")
+        .title()
+    )
+
+
+def _get_transformed_feature_names(
+    preprocessor,
+    expected_count: int,
+) -> list[str]:
+    """Return the exact transformed feature names from the preprocessor."""
+
+    if not hasattr(preprocessor, "get_feature_names_out"):
+        raise ValueError(
+            "The final preprocessor does not expose transformed "
+            "feature names."
+        )
+
+    transformed_feature_names = (
+        preprocessor
+        .get_feature_names_out()
+        .astype(str)
+        .tolist()
+    )
+
+    if len(transformed_feature_names) != expected_count:
+        raise ValueError(
+            "The transformed feature-name count does not match the "
+            f"transformed matrix. Names: {len(transformed_feature_names)}, "
+            f"matrix columns: {expected_count}."
+        )
+
+    return transformed_feature_names
+
+
+def _map_to_original_feature(
+    transformed_feature: str,
+    raw_feature_names: list[str],
+) -> str:
+    """Map a transformed numeric or one-hot feature to its raw predictor."""
+
+    feature_body = transformed_feature.split("__", 1)[-1]
+
+    matching_features = [
+        raw_feature
+        for raw_feature in raw_feature_names
+        if (
+            feature_body == raw_feature
+            or feature_body.startswith(f"{raw_feature}_")
+        )
+    ]
+
+    if not matching_features:
+        return feature_body
+
+    # Longest match prevents partial matching of names such as
+    # diag_1_group and number_inpatient.
+    return max(matching_features, key=len)
+
+
+def _build_record_explanation(
+    record_number: int,
+    raw_record: pd.Series,
+    transformed_feature_names: list[str],
+    raw_feature_names: list[str],
+    transformed_contributions: np.ndarray,
+    probability_percentage: float,
+) -> pd.DataFrame:
+    """Aggregate 179 transformed contributions into 43 raw predictors."""
+
+    transformed_explanation = pd.DataFrame(
+        {
+            "Transformed Feature": transformed_feature_names,
+            "Original Feature": [
+                _map_to_original_feature(
+                    transformed_feature=feature,
+                    raw_feature_names=raw_feature_names,
+                )
+                for feature in transformed_feature_names
+            ],
+            "Contribution": transformed_contributions,
+        }
+    )
+
+    grouped_explanation = (
+        transformed_explanation
+        .groupby("Original Feature", as_index=False)
+        .agg(
+            Contribution=("Contribution", "sum"),
+            Transformed_Feature_Count=(
+                "Transformed Feature",
+                "count",
+            ),
+        )
+    )
+
+    grouped_explanation["Feature"] = grouped_explanation[
+        "Original Feature"
+    ].map(_format_feature_name)
+
+    grouped_explanation["Patient Value"] = grouped_explanation[
+        "Original Feature"
+    ].map(
+        lambda feature: raw_record.get(feature, "Unavailable")
+    )
+
+    grouped_explanation["Direction"] = np.where(
+        grouped_explanation["Contribution"] > 0,
+        "Increases estimated readmission risk",
+        np.where(
+            grouped_explanation["Contribution"] < 0,
+            "Reduces estimated readmission risk",
+            "Minimal effect",
+        ),
+    )
+
+    grouped_explanation["Absolute Impact"] = grouped_explanation[
+        "Contribution"
+    ].abs()
+
+    grouped_explanation.insert(
+        0,
+        "Record Number",
+        record_number,
+    )
+    grouped_explanation.insert(
+        1,
+        "Readmission Probability (%)",
+        probability_percentage,
+    )
+
+    return grouped_explanation.sort_values(
+        "Absolute Impact",
+        ascending=False,
+    ).reset_index(drop=True)
+
+
+def explain_readmission_batch(
+    input_dataframe: pd.DataFrame,
+    top_n: int = 5,
+) -> pd.DataFrame:
+    """
+    Generate record-level model explanations for one or more CSV rows.
+
+    The returned table contains the strongest factors increasing and
+    reducing the model-estimated readmission risk for each record.
+    Contributions are XGBoost Tree SHAP values on the raw-margin scale.
+    """
+
+    if not isinstance(top_n, int) or top_n < 1:
+        raise ValueError("top_n must be a positive integer.")
+
+    preprocessor, model = load_prediction_assets()
+    validated_data = validate_batch_input(input_dataframe)
+
+    transformed_data = preprocessor.transform(validated_data)
+
+    if transformed_data.shape[1] != 179:
+        raise ValueError(
+            "Preprocessing did not produce the expected "
+            "179 transformed features."
+        )
+
+    raw_feature_names = (
+        preprocessor
+        .feature_names_in_
+        .astype(str)
+        .tolist()
+    )
+
+    transformed_feature_names = _get_transformed_feature_names(
+        preprocessor=preprocessor,
+        expected_count=transformed_data.shape[1],
+    )
+
+    probabilities = model.predict_proba(
+        transformed_data
+    )[:, 1]
+
+    booster = model.get_booster()
+    contribution_matrix = booster.predict(
+        xgb.DMatrix(transformed_data),
+        pred_contribs=True,
+        validate_features=False,
+    )
+
+    expected_shape = (
+        len(validated_data),
+        transformed_data.shape[1] + 1,
+    )
+
+    if contribution_matrix.shape != expected_shape:
+        raise ValueError(
+            "Unexpected contribution matrix shape. "
+            f"Expected {expected_shape}, "
+            f"received {contribution_matrix.shape}."
+        )
+
+    feature_contributions = contribution_matrix[:, :-1]
+    baseline_values = contribution_matrix[:, -1]
+
+    reconstructed_probabilities = _sigmoid(
+        feature_contributions.sum(axis=1)
+        + baseline_values
+    )
+
+    maximum_difference = float(
+        np.max(
+            np.abs(
+                probabilities
+                - reconstructed_probabilities
+            )
+        )
+    )
+
+    if maximum_difference > 0.00001:
+        raise ValueError(
+            "The explanation contributions did not accurately "
+            "reconstruct the model probabilities. Maximum difference: "
+            f"{maximum_difference:.10f}"
+        )
+
+    selected_explanations = []
+
+    for record_index in range(len(validated_data)):
+        record_explanation = _build_record_explanation(
+            record_number=record_index + 1,
+            raw_record=validated_data.iloc[record_index],
+            transformed_feature_names=transformed_feature_names,
+            raw_feature_names=raw_feature_names,
+            transformed_contributions=(
+                feature_contributions[record_index]
+            ),
+            probability_percentage=float(
+                probabilities[record_index] * 100
+            ),
+        )
+
+        increasing_factors = (
+            record_explanation[
+                record_explanation["Contribution"] > 0
+            ]
+            .sort_values(
+                "Contribution",
+                ascending=False,
+            )
+            .head(top_n)
+            .copy()
+        )
+        increasing_factors["Factor Rank"] = range(
+            1,
+            len(increasing_factors) + 1,
+        )
+
+        reducing_factors = (
+            record_explanation[
+                record_explanation["Contribution"] < 0
+            ]
+            .sort_values(
+                "Contribution",
+                ascending=True,
+            )
+            .head(top_n)
+            .copy()
+        )
+        reducing_factors["Factor Rank"] = range(
+            1,
+            len(reducing_factors) + 1,
+        )
+
+        selected_explanations.extend(
+            [increasing_factors, reducing_factors]
+        )
+
+    non_empty_explanations = [
+        explanation
+        for explanation in selected_explanations
+        if not explanation.empty
+    ]
+
+    if not non_empty_explanations:
+        return pd.DataFrame(
+            columns=[
+                "Record Number",
+                "Readmission Probability (%)",
+                "Direction",
+                "Factor Rank",
+                "Feature",
+                "Patient Value",
+                "Contribution",
+                "Absolute Impact",
+                "Original Feature",
+            ]
+        )
+
+    explanation_results = pd.concat(
+        non_empty_explanations,
+        ignore_index=True,
+    )
+
+    return explanation_results[
+        [
+            "Record Number",
+            "Readmission Probability (%)",
+            "Direction",
+            "Factor Rank",
+            "Feature",
+            "Patient Value",
+            "Contribution",
+            "Absolute Impact",
+            "Original Feature",
+        ]
+    ].sort_values(
+        [
+            "Record Number",
+            "Direction",
+            "Factor Rank",
+        ]
+    ).reset_index(drop=True)
+

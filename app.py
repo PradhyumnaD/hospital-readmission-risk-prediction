@@ -7,7 +7,10 @@ import hashlib
 import pandas as pd
 import streamlit as st
 
-from prediction_service import predict_readmission_batch
+from prediction_service import (
+    explain_readmission_batch,
+    predict_readmission_batch,
+)
 
 
 # ---------------------------------------------------------
@@ -260,6 +263,31 @@ FEATURE_LABELS = {
 }
 
 
+DISCHARGE_DISPOSITION_LABELS = {
+    "1": "Discharged to Home",
+    "2": "Transferred to Short-Term Hospital",
+    "3": "Transferred to Skilled Nursing Facility",
+    "4": "Transferred to Intermediate Care Facility",
+    "5": "Transferred to Inpatient Care Institution",
+    "6": "Discharged Home with Home Health Service",
+    "7": "Left Against Medical Advice",
+    "8": "Discharged Home with IV Provider",
+    "9": "Admitted as an Inpatient to This Hospital",
+    "10": "Transferred to Another Hospital",
+    "12": "Still a Patient or Expected to Return",
+    "15": "Transferred Within Institution",
+    "16": "Transferred to Outpatient Services",
+    "17": "Transferred to Emergency Department",
+    "18": "Unknown or Not Mapped",
+    "22": "Transferred to Rehabilitation Facility",
+    "23": "Transferred to Long-Term Care Hospital",
+    "24": "Transferred to Nursing Facility",
+    "25": "Unknown or Not Mapped",
+    "27": "Transferred to Federal Healthcare Facility",
+    "28": "Transferred to Psychiatric Hospital",
+}
+
+
 # ---------------------------------------------------------
 # Cached data loaders
 # ---------------------------------------------------------
@@ -507,6 +535,30 @@ def format_feature_name(feature_name: str) -> str:
     )
 
 
+def format_patient_value(
+    original_feature: str,
+    patient_value,
+) -> str:
+    """Convert coded patient values into readable descriptions."""
+
+    if original_feature == "discharge_disposition_id":
+        value_key = str(patient_value).strip()
+
+        try:
+            numeric_value = float(value_key)
+            if numeric_value.is_integer():
+                value_key = str(int(numeric_value))
+        except (TypeError, ValueError):
+            pass
+
+        return DISCHARGE_DISPOSITION_LABELS.get(
+            value_key,
+            f"Disposition Code {value_key}",
+        )
+
+    return str(patient_value)
+
+
 def find_threshold_row(
     final_results: pd.DataFrame,
     threshold: float,
@@ -542,6 +594,55 @@ def integer_value(row: pd.Series | None, column: str) -> str:
     if row is None or pd.isna(row[column]):
         return "Unavailable"
     return f"{int(row[column]):,}"
+
+
+def create_user_friendly_screening_results(
+    prediction_results: pd.DataFrame,
+) -> pd.DataFrame:
+    """Convert technical model output into user-friendly screening labels."""
+
+    screening_results = prediction_results.copy()
+
+    screening_results["Main Classification"] = (
+        screening_results["Main Classification"].replace(
+            {
+                "Flagged at Main Threshold": "Review Recommended",
+                "Not Flagged at Main Threshold": (
+                    "No Standard Review Flag"
+                ),
+            }
+        )
+    )
+
+    screening_results["Recall-Focused Classification"] = (
+        screening_results[
+            "Recall-Focused Classification"
+        ].replace(
+            {
+                "Flagged for Screening": (
+                    "Additional Screening Recommended"
+                ),
+                "Not Flagged": "No Additional Screening Flag",
+            }
+        )
+    )
+
+    return screening_results.rename(
+        columns={
+            "Record Number": "Record",
+            "Readmission Probability (%)": (
+                "Estimated 30-Day Readmission Risk (%)"
+            ),
+            "Main Threshold": "Standard Review Cutoff",
+            "Main Classification": "Standard Review Result",
+            "Recall-Focused Threshold": (
+                "Additional Screening Cutoff"
+            ),
+            "Recall-Focused Classification": (
+                "Additional Screening Result"
+            ),
+        }
+    )
 
 
 # ---------------------------------------------------------
@@ -622,7 +723,7 @@ def render_project_overview() -> None:
         3. **Patient-level splitting and preprocessing** — Completed  
         4. **Baseline and candidate model evaluation** — Completed  
         5. **Model tuning and threshold analysis** — Completed  
-        6. **Final model and threshold selection** — Completed 
+        6. **Final model and threshold selection** — Completed  
         7. **Untouched test-set evaluation** — Completed  
         8. **Model explainability analysis** — Completed  
         9. **CSV-based Streamlit prediction workflow** — Completed
@@ -1057,9 +1158,10 @@ def render_explainability() -> None:
         """
     )
 
-    st.warning(
-        "Global importance describes overall model behavior. It does not "
-        "explain the prediction for a specific uploaded patient record."
+    st.info(
+        "Global importance describes overall model behavior. For an "
+        "explanation of a specific uploaded record, use the Patient Risk "
+        "Prediction page."
     )
 
     if not GLOBAL_SHAP_IMPORTANCE_PATH.exists():
@@ -1196,6 +1298,8 @@ def render_prediction() -> None:
             st.session_state["patient_upload_signature"] = upload_signature
             st.session_state.pop("batch_prediction_results", None)
             st.session_state.pop("batch_prediction_download", None)
+            st.session_state.pop("batch_explanation_results", None)
+            st.session_state.pop("batch_explanation_download", None)
 
         uploaded_data = pd.read_csv(BytesIO(uploaded_bytes))
 
@@ -1226,21 +1330,50 @@ def render_prediction() -> None:
             with st.spinner(
                 "Validating the CSV and calculating predictions..."
             ):
-                prediction_results = predict_readmission_batch(uploaded_data)
+                prediction_results = predict_readmission_batch(
+                    uploaded_data
+                )
+                explanation_results = explain_readmission_batch(
+                    uploaded_data,
+                    top_n=5,
+                )
+
+                screening_results = (
+                    create_user_friendly_screening_results(
+                        prediction_results
+                    )
+                )
 
                 combined_results = pd.concat(
                     [
-                        prediction_results.reset_index(drop=True),
+                        screening_results.reset_index(drop=True),
                         uploaded_data.reset_index(drop=True),
                     ],
                     axis=1,
                 )
+
+                explanation_download = explanation_results[
+                    [
+                        "Record Number",
+                        "Readmission Probability (%)",
+                        "Direction",
+                        "Factor Rank",
+                        "Feature",
+                        "Patient Value",
+                    ]
+                ].copy()
 
                 st.session_state["batch_prediction_results"] = (
                     prediction_results
                 )
                 st.session_state["batch_prediction_download"] = (
                     combined_results.to_csv(index=False).encode("utf-8")
+                )
+                st.session_state["batch_explanation_results"] = (
+                    explanation_results
+                )
+                st.session_state["batch_explanation_download"] = (
+                    explanation_download.to_csv(index=False).encode("utf-8")
                 )
 
         prediction_results = st.session_state.get(
@@ -1249,12 +1382,18 @@ def render_prediction() -> None:
         downloadable_results = st.session_state.get(
             "batch_prediction_download"
         )
+        explanation_results = st.session_state.get(
+            "batch_explanation_results"
+        )
+        downloadable_explanations = st.session_state.get(
+            "batch_explanation_download"
+        )
 
         if prediction_results is None:
             return
 
         st.divider()
-        st.subheader("Prediction Results")
+        st.subheader("30-Day Readmission Screening Results")
 
         total_records = len(prediction_results)
         main_high_risk_count = int(
@@ -1275,26 +1414,34 @@ def render_prediction() -> None:
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Records Processed", f"{total_records:,}")
+            st.metric("Records Reviewed", f"{total_records:,}")
         with col2:
-            st.metric("Main-Threshold Flags", f"{main_high_risk_count:,}")
+            st.metric("Standard Review Flags", f"{main_high_risk_count:,}")
         with col3:
-            st.metric("Recall-Focused Flags", f"{recall_flagged_count:,}")
+            st.metric("Additional Screening Flags", f"{recall_flagged_count:,}")
         with col4:
-            st.metric("Average Probability", f"{average_probability:.2f}%")
+            st.metric(
+                "Average Estimated Readmission Risk",
+                f"{average_probability:.2f}%",
+            )
 
-        display_results = prediction_results[
+        display_results = create_user_friendly_screening_results(
+            prediction_results
+        )[
             [
-                "Record Number",
-                "Readmission Probability (%)",
-                "Main Threshold",
-                "Main Classification",
-                "Recall-Focused Threshold",
-                "Recall-Focused Classification",
+                "Record",
+                "Estimated 30-Day Readmission Risk (%)",
+                "Standard Review Cutoff",
+                "Standard Review Result",
+                "Additional Screening Cutoff",
+                "Additional Screening Result",
             ]
         ].copy()
-        display_results["Readmission Probability (%)"] = display_results[
-            "Readmission Probability (%)"
+
+        display_results[
+            "Estimated 30-Day Readmission Risk (%)"
+        ] = display_results[
+            "Estimated 30-Day Readmission Risk (%)"
         ].round(2)
 
         st.dataframe(
@@ -1302,19 +1449,21 @@ def render_prediction() -> None:
             hide_index=True,
             width="stretch",
             column_config={
-                "Readmission Probability (%)": (
+                "Estimated 30-Day Readmission Risk (%)": (
                     st.column_config.NumberColumn(
-                        "Readmission Probability (%)",
+                        "Estimated 30-Day Readmission Risk (%)",
                         format="%.2f",
                     )
                 ),
-                "Main Threshold": st.column_config.NumberColumn(
-                    "Main Threshold",
-                    format="%.2f",
-                ),
-                "Recall-Focused Threshold": (
+                "Standard Review Cutoff": (
                     st.column_config.NumberColumn(
-                        "Recall-Focused Threshold",
+                        "Standard Review Cutoff",
+                        format="%.2f",
+                    )
+                ),
+                "Additional Screening Cutoff": (
+                    st.column_config.NumberColumn(
+                        "Additional Screening Cutoff",
                         format="%.2f",
                     )
                 ),
@@ -1322,20 +1471,159 @@ def render_prediction() -> None:
         )
 
         st.caption(
-            "Main classification uses threshold 0.50. Recall-focused "
-            "screening uses threshold 0.45 and therefore flags more "
-            "encounters for additional review."
+            "The standard review uses a 50% cutoff. Additional screening "
+            "uses a lower 45% cutoff, so it identifies more records that "
+            "may benefit from follow-up."
         )
 
-        if downloadable_results is not None:
-            st.download_button(
-                "Download Prediction Results",
-                data=downloadable_results,
-                file_name="hospital_readmission_predictions.csv",
-                mime="text/csv",
-                type="primary",
-                use_container_width=True,
+        if explanation_results is not None:
+            st.divider()
+            st.subheader("Why the Model Produced Each Prediction")
+            st.write(
+                "Select a record to review the strongest factors that moved "
+                "its estimated readmission risk higher or lower."
             )
+            st.caption(
+                "These factors explain the model's calculation. They do not "
+                "prove that a factor caused or prevented readmission."
+            )
+
+            available_record_numbers = (
+                prediction_results["Record Number"]
+                .astype(int)
+                .tolist()
+            )
+
+            selected_record_number = st.selectbox(
+                "Select a record to explain",
+                options=available_record_numbers,
+                format_func=lambda record: f"Record {record}",
+                key="prediction_explanation_record",
+            )
+
+            selected_prediction = prediction_results[
+                prediction_results["Record Number"]
+                == selected_record_number
+            ].iloc[0]
+
+            selected_explanation = explanation_results[
+                explanation_results["Record Number"]
+                == selected_record_number
+            ].copy()
+
+            explanation_col1, explanation_col2, explanation_col3 = (
+                st.columns(3)
+            )
+            with explanation_col1:
+                st.metric(
+                    "Estimated 30-Day Readmission Risk",
+                    (
+                        f"{selected_prediction['Readmission Probability (%)']:.2f}%"
+                    ),
+                )
+
+            with explanation_col2:
+                st.markdown("**Standard Review Result**")
+
+                if (
+                    selected_prediction["Main Classification"]
+                    == "Flagged at Main Threshold"
+                ):
+                    st.warning("Review Recommended")
+                else:
+                    st.success("No Standard Review Flag")
+
+            with explanation_col3:
+                st.markdown("**Additional Screening Result**")
+
+                if (
+                    selected_prediction[
+                        "Recall-Focused Classification"
+                    ]
+                    == "Flagged for Screening"
+                ):
+                    st.warning("Additional Screening Recommended")
+                else:
+                    st.success("No Additional Screening Flag")
+
+            increasing_factors = selected_explanation[
+                selected_explanation["Direction"]
+                == "Increases estimated readmission risk"
+            ].sort_values("Factor Rank")
+
+            reducing_factors = selected_explanation[
+                selected_explanation["Direction"]
+                == "Reduces estimated readmission risk"
+            ].sort_values("Factor Rank")
+
+            factors_col1, factors_col2 = st.columns(2)
+
+            with factors_col1:
+                st.markdown(
+                    "#### Factors increasing the estimated risk"
+                )
+                if increasing_factors.empty:
+                    st.write(
+                        "No meaningful increasing factors were identified."
+                    )
+                else:
+                    for _, factor in increasing_factors.iterrows():
+                        readable_value = format_patient_value(
+                            factor["Original Feature"],
+                            factor["Patient Value"],
+                        )
+                        st.markdown(
+                            f"- **{factor['Feature']}**: "
+                            f"{readable_value}"
+                        )
+
+            with factors_col2:
+                st.markdown(
+                    "#### Factors reducing the estimated risk"
+                )
+                if reducing_factors.empty:
+                    st.write(
+                        "No meaningful reducing factors were identified."
+                    )
+                else:
+                    for _, factor in reducing_factors.iterrows():
+                        readable_value = format_patient_value(
+                            factor["Original Feature"],
+                            factor["Patient Value"],
+                        )
+                        st.markdown(
+                            f"- **{factor['Feature']}**: "
+                            f"{readable_value}"
+                        )
+
+            st.info(
+                "A factor can influence the model differently for another "
+                "record because the prediction depends on all entered values "
+                "and their interactions."
+            )
+
+        download_col1, download_col2 = st.columns(2)
+
+        with download_col1:
+            if downloadable_results is not None:
+                st.download_button(
+                    "Download Screening Results",
+                    data=downloadable_results,
+                    file_name="hospital_readmission_screening_results.csv",
+                    mime="text/csv",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+        with download_col2:
+            if downloadable_explanations is not None:
+                st.download_button(
+                    "Download Prediction Factors",
+                    data=downloadable_explanations,
+                    file_name="hospital_readmission_prediction_factors.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
 
     except pd.errors.EmptyDataError:
         st.error("The uploaded CSV is empty or contains no readable data.")
