@@ -415,9 +415,9 @@ def predict_readmission_batch(
             "Main Threshold": main_threshold,
             "Main Classification": [
                 (
-                    "Higher Readmission Risk"
+                    "Flagged at Main Threshold"
                     if prediction == 1
-                    else "Lower Readmission Risk"
+                    else "Not Flagged at Main Threshold"
                 )
                 for prediction in main_predictions
             ],

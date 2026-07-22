@@ -622,7 +622,7 @@ def render_project_overview() -> None:
         3. **Patient-level splitting and preprocessing** — Completed  
         4. **Baseline and candidate model evaluation** — Completed  
         5. **Model tuning and threshold analysis** — Completed  
-        6. **Professor review and final model selection** — Completed  
+        6. **Final model and threshold selection** — Completed 
         7. **Untouched test-set evaluation** — Completed  
         8. **Model explainability analysis** — Completed  
         9. **CSV-based Streamlit prediction workflow** — Completed
@@ -1260,7 +1260,7 @@ def render_prediction() -> None:
         main_high_risk_count = int(
             (
                 prediction_results["Main Classification"]
-                == "Higher Readmission Risk"
+                == "Flagged at Main Threshold"
             ).sum()
         )
         recall_flagged_count = int(
@@ -1277,7 +1277,7 @@ def render_prediction() -> None:
         with col1:
             st.metric("Records Processed", f"{total_records:,}")
         with col2:
-            st.metric("Main Higher-Risk Records", f"{main_high_risk_count:,}")
+            st.metric("Main-Threshold Flags", f"{main_high_risk_count:,}")
         with col3:
             st.metric("Recall-Focused Flags", f"{recall_flagged_count:,}")
         with col4:
