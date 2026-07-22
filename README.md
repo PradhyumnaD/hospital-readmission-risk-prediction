@@ -31,13 +31,14 @@ A complete machine-learning capstone project for estimating the probability of *
 15. [Streamlit Application](#streamlit-application)
 16. [CSV Prediction Workflow](#csv-prediction-workflow)
 17. [Installation and Local Execution](#installation-and-local-execution)
-18. [Project Structure](#project-structure)
-19. [Notebook-by-Notebook Summary](#notebook-by-notebook-summary)
-20. [Important Artifacts](#important-artifacts)
-21. [Reproducibility and Validation](#reproducibility-and-validation)
-22. [Limitations](#limitations)
-23. [Responsible Use](#responsible-use)
-24. [Future Enhancements](#future-enhancements)
+18. [Online Deployment](#online-deployment)
+19. [Project Structure](#project-structure)
+20. [Notebook-by-Notebook Summary](#notebook-by-notebook-summary)
+21. [Important Artifacts](#important-artifacts)
+22. [Reproducibility and Validation](#reproducibility-and-validation)
+23. [Limitations](#limitations)
+24. [Responsible Use](#responsible-use)
+25. [Future Enhancements](#future-enhancements)
 
 ---
 
@@ -640,7 +641,7 @@ outputs/sample_patient_input.csv
 ```
 
 - `patient_input_template.csv` contains the 43 required column headers and no patient rows.
-- `sample_patient_input.csv` contains one valid demonstration row created from stored schema defaults.
+- `sample_patient_input.csv` contains three synthetic demonstration rows, including different utilization profiles for batch-prediction testing.
 - The sample file is not a real patient and is not drawn from the final test set.
 
 ### Prediction steps
@@ -797,15 +798,64 @@ Upload:
 outputs/sample_patient_input.csv
 ```
 
-The expected demonstration output is approximately:
+The application should load:
 
 ```text
-Readmission probability: 46.39%
-Main threshold 0.50: Not Flagged at Main Threshold
-Recall-focused threshold 0.45: Flagged for Screening
+3 records
+43 predictor columns
 ```
 
-The exact result should match the prediction service and Streamlit display.
+Generate predictions and confirm that all three records receive a probability, a main-threshold classification, and a recall-focused classification.
+
+---
+
+## Online Deployment
+
+The application is designed for deployment through Streamlit Community Cloud.
+
+### Deployment coordinates
+
+```text
+Repository: hospital-readmission-project
+Branch: main
+Entrypoint: app.py
+```
+
+### Required preparation
+
+Before deployment:
+
+1. Confirm that `requirements.txt` contains the versions used by the local project environment.
+2. Confirm that the final model and preprocessor are committed and available through Git or Git LFS.
+3. Confirm that all CSV, JSON, metric, and figure files used by `app.py` are present in the repository.
+4. Run the syntax checks documented above.
+5. Push the final repository to GitHub.
+
+### Community Cloud setup
+
+1. Connect Streamlit Community Cloud to the GitHub account that owns the repository.
+2. Create a new app from the existing repository.
+3. Select branch `main`.
+4. Set the entrypoint to `app.py`.
+5. Select the Python version that matches the local environment.
+6. Deploy and monitor the build logs.
+7. Validate every dashboard page and run the three-record sample CSV.
+
+The application does not require secrets or external credentials.
+
+After deployment, add the public application address to this README using a Streamlit badge.
+
+A complete operational checklist is available in:
+
+```text
+STREAMLIT_CLOUD_DEPLOYMENT_CHECKLIST.md
+```
+
+The application walkthrough is available in:
+
+```text
+STREAMLIT_APP_USER_GUIDE.md
+```
 
 ---
 
@@ -846,6 +896,8 @@ hospital-readmission-project/
 ├── prepare_streamlit_input_schema.py
 ├── create_sample_input_csv.py
 ├── README.md
+├── STREAMLIT_APP_USER_GUIDE.md
+├── STREAMLIT_CLOUD_DEPLOYMENT_CHECKLIST.md
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes
@@ -1243,12 +1295,12 @@ predict_proba available: True
 Using `outputs/sample_patient_input.csv`:
 
 ```text
-Probability: approximately 46.39%
-Main threshold 0.50: Not Flagged at Main Threshold
-Recall-focused threshold 0.45: Flagged for Screening
+Records: 3
+Required predictor columns: 43
+Prediction outputs per record: probability plus two threshold classifications
 ```
 
-The terminal prediction result and Streamlit result were verified to match.
+The first record preserves the original validated demonstration profile. Two additional synthetic records were added to demonstrate batch prediction. The sample contains no real patient information and is not drawn from the final test set.
 
 ---
 
