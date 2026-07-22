@@ -1,0 +1,51 @@
+{
+    "notebook": "07_final_test_evaluation.ipynb",
+    "final_model": "Tuned XGBoost",
+    "model_source": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_6_best_tuned_xgboost.joblib",
+    "preprocessor_source": "C:\\Users\\pradh\\Documents\\hospital-readmission-project\\models\\notebook_4_fitted_preprocessor.joblib",
+    "test_set_rows": 14976,
+    "test_positive_class_rate": 0.11338141025641026,
+    "test_readmitted_count": 1698,
+    "test_not_readmitted_count": 13278,
+    "thresholds_evaluated": [
+        0.5,
+        0.45
+    ],
+    "main_balanced_threshold": {
+        "threshold": 0.5,
+        "accuracy": 0.6537126068376068,
+        "balanced_accuracy": 0.610824675051641,
+        "precision": 0.17547450688500185,
+        "recall": 0.555359246171967,
+        "specificity": 0.6662901039313149,
+        "f1_score": 0.26668552036199095,
+        "roc_auc": 0.6638726731838189,
+        "pr_auc": 0.22376421017245923,
+        "true_positives": 943,
+        "false_negatives": 755,
+        "false_positives": 4431,
+        "true_negatives": 8847
+    },
+    "recall_focused_threshold": {
+        "threshold": 0.45,
+        "accuracy": 0.5584935897435898,
+        "balanced_accuracy": 0.6079747737563184,
+        "precision": 0.15856031128404668,
+        "recall": 0.6719670200235571,
+        "specificity": 0.5439825274890797,
+        "f1_score": 0.25657746795592534,
+        "roc_auc": 0.6638726731838189,
+        "pr_auc": 0.22376421017245923,
+        "true_positives": 1141,
+        "false_negatives": 557,
+        "false_positives": 6055,
+        "true_negatives": 7223
+    },
+    "threshold_tradeoff": {
+        "additional_readmissions_caught_at_045": 198,
+        "reduced_false_negatives_at_045": 198,
+        "additional_false_positives_at_045": 1624
+    },
+    "final_interpretation": "Tuned XGBoost was selected as the final model. Threshold 0.50 is used as the main balanced option, while threshold 0.45 is presented as a recall-focused clinical screening option. Lowering the threshold increases recall and catches more readmitted patients, but also increases false positives.",
+    "created_at": "2026-07-21 17:49:53"
+}

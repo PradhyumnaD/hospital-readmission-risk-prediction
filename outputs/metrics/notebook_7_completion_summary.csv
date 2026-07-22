@@ -1,0 +1,11 @@
+item,value
+Final model,Tuned XGBoost
+Main balanced threshold,0.50
+Recall-focused threshold,0.45
+Test rows,14976
+Threshold 0.50 accuracy,65.37%
+Threshold 0.50 recall,55.54%
+Threshold 0.45 accuracy,55.85%
+Threshold 0.45 recall,67.20%
+Additional readmissions caught at threshold 0.45,198
+Additional false positives at threshold 0.45,1624

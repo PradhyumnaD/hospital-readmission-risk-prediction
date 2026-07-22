@@ -1,0 +1,2 @@
+ Record Number  Readmission Probability  Readmission Probability (%)  Main Threshold    Main Classification  Recall-Focused Threshold Recall-Focused Classification
+             1                  0.46385                     46.38501             0.5 Lower Readmission Risk                      0.45         Flagged for Screening
