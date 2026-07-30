@@ -1,12 +1,12 @@
 Validation Property,Validated Value
 Validation steps completed,6
-Total validation checks,88
-Passed validation checks,88
+Total validation checks,98
+Passed validation checks,98
 Failed validation checks,0
 Overall pass rate,100.00%
 Raw predictors validated,43
 Transformed features validated,179
-Application pages validated,7
+Application pages validated,8
 Prediction input methods validated,3
 Approved figures validated,22
 Invalid-input tests completed,18

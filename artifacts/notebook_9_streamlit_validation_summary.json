@@ -1,7 +1,7 @@
 {
   "notebook": "09_streamlit_application_validation.ipynb",
   "validation_status": "PASSED",
-  "validation_timestamp": "2026-07-30T13:16:37-05:00",
+  "validation_timestamp": "2026-07-30T17:13:11-05:00",
   "final_model": "XGBClassifier",
   "prediction_target": "readmitted_30",
   "positive_class": 1,
@@ -11,13 +11,13 @@
   "transformed_features": 179,
   "standard_review_cutoff": 0.5,
   "additional_screening_cutoff": 0.45,
-  "application_pages": 7,
+  "application_pages": 8,
   "prediction_input_methods": 3,
   "approved_figures": 22,
   "invalid_input_tests": 18,
   "validation_steps": 6,
-  "total_checks": 88,
-  "passed_checks": 88,
+  "total_checks": 98,
+  "passed_checks": 98,
   "failed_checks": 0,
   "overall_pass_rate_percentage": 100.0,
   "step_summary": [
@@ -60,8 +60,8 @@
     {
       "Step Number": 5,
       "Validation Area": "Downloadable Outputs",
-      "Total Checks": 23,
-      "Passed Checks": 23,
+      "Total Checks": 28,
+      "Passed Checks": 28,
       "Failed Checks": 0,
       "Pass Rate (%)": 100.0,
       "Result": "PASSED"
@@ -69,8 +69,8 @@
     {
       "Step Number": 6,
       "Validation Area": "Application Structure",
-      "Total Checks": 10,
-      "Passed Checks": 10,
+      "Total Checks": 15,
+      "Passed Checks": 15,
       "Failed Checks": 0,
       "Pass Rate (%)": 100.0,
       "Result": "PASSED"

@@ -58,6 +58,11 @@ Step Number,Validation Area,Validation Check,Passed,Result
 5,Downloadable Outputs,Single screening download contains expected columns,True,PASSED
 5,Downloadable Outputs,Single screening result contains 43 predictor values,True,PASSED
 5,Downloadable Outputs,Factor download contains expected columns,True,PASSED
+5,Downloadable Outputs,Factor download patient values are readable,True,PASSED
+5,Downloadable Outputs,Factor download retains original feature names,True,PASSED
+5,Downloadable Outputs,Factor download probabilities are rounded to four decimals,True,PASSED
+5,Downloadable Outputs,Age factors use readable year-range labels,True,PASSED
+5,Downloadable Outputs,Discharge-disposition factors use readable labels,True,PASSED
 5,Downloadable Outputs,Single download probability matches model output,True,PASSED
 5,Downloadable Outputs,Batch download probability matches model output,True,PASSED
 5,Downloadable Outputs,Single download uses the 0.50 standard cutoff,True,PASSED
@@ -79,7 +84,7 @@ Step Number,Validation Area,Validation Check,Passed,Result
 5,Downloadable Outputs,Factor CSV payload is not empty,True,PASSED
 6,Application Structure,All required application files exist,True,PASSED
 6,Application Structure,All Python application files have valid syntax,True,PASSED
-6,Application Structure,All seven application pages are configured,True,PASSED
+6,Application Structure,All eight application pages are configured,True,PASSED
 6,Application Structure,All three prediction input methods are configured,True,PASSED
 6,Application Structure,All essential app functions are defined,True,PASSED
 6,Application Structure,All reusable UI components are defined,True,PASSED
@@ -87,3 +92,8 @@ Step Number,Validation Area,Validation Check,Passed,Result
 6,Application Structure,Blank and synthetic templates are valid,True,PASSED
 6,Application Structure,All 22 approved figures are available,True,PASSED
 6,Application Structure,Public wording and threshold references are valid,True,PASSED
+6,Application Structure,Direct-entry confirmation checkbox is configured,True,PASSED
+6,Application Structure,Calculate action requires confirmed values,True,PASSED
+6,Application Structure,Changing inputs clears confirmation and prior results,True,PASSED
+6,Application Structure,Readable factor downloads are configured,True,PASSED
+6,Application Structure,Application Validation dashboard uses saved evidence,True,PASSED
