@@ -4,13 +4,37 @@ from io import BytesIO
 from pathlib import Path
 import hashlib
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
 from prediction_service import (
+    build_default_input,
     explain_readmission_batch,
+    load_input_schema,
+    predict_readmission,
     predict_readmission_batch,
+    validate_batch_input,
 )
+
+from ui.form_config import (
+    ADDITIONAL_MEDICATION_FIELDS,
+    FORM_STEPS,
+    PRIMARY_DIABETES_FIELDS,
+    get_feature_help,
+    get_feature_label,
+    get_option_label,
+    validate_form_configuration,
+)
+from ui.components import (
+    render_info_card,
+    render_key_message,
+    render_metric_card,
+    render_page_hero,
+    render_threshold_card,
+    render_three_step_workflow,
+)
+from ui.styles import apply_global_styles
 
 
 # ---------------------------------------------------------
@@ -22,6 +46,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+apply_global_styles()
 
 
 # ---------------------------------------------------------
@@ -70,6 +96,609 @@ SAMPLE_PATIENT_PATH = (
 )
 
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures"
+
+
+# ---------------------------------------------------------
+# Guided single-patient form foundation
+# ---------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def load_guided_form_schema() -> dict:
+    """Load and validate the schema used by the direct-entry form."""
+
+    schema = load_input_schema()
+    validation = validate_form_configuration(schema["feature_order"])
+
+    configuration_errors = {
+        key: value
+        for key, value in validation.items()
+        if value
+    }
+
+    if configuration_errors:
+        raise ValueError(
+            "The guided form configuration does not match the "
+            f"deployment schema: {configuration_errors}"
+        )
+
+    return schema
+
+
+def initialize_single_patient_state() -> None:
+    """Create persistent state for the guided direct-entry workflow."""
+
+    if "single_patient_values" not in st.session_state:
+        st.session_state["single_patient_values"] = build_default_input()
+
+    if "single_patient_form_step" not in st.session_state:
+        st.session_state["single_patient_form_step"] = 0
+
+    if "single_prediction_result" not in st.session_state:
+        st.session_state["single_prediction_result"] = None
+
+    if "single_explanation_result" not in st.session_state:
+        st.session_state["single_explanation_result"] = None
+
+
+def clear_single_patient_widget_state() -> None:
+    """Remove widget keys used by the guided patient form."""
+
+    widget_keys = [
+        key
+        for key in st.session_state
+        if str(key).startswith("single_input_")
+    ]
+
+    for key in widget_keys:
+        st.session_state.pop(key, None)
+
+
+def invalidate_single_patient_results() -> None:
+    """Clear saved results whenever a direct-entry value changes."""
+
+    st.session_state["single_prediction_result"] = None
+    st.session_state["single_explanation_result"] = None
+    st.session_state.pop("single_screening_download", None)
+    st.session_state.pop("single_explanation_download", None)
+
+
+def reset_single_patient_form() -> None:
+    """Restore schema defaults and return to the first form step."""
+
+    st.session_state["single_patient_values"] = build_default_input()
+    st.session_state["single_patient_form_step"] = 0
+    invalidate_single_patient_results()
+    clear_single_patient_widget_state()
+
+
+def load_sample_record_into_form() -> None:
+    """Load the first validated synthetic sample into the guided form."""
+
+    if not SAMPLE_PATIENT_PATH.exists():
+        st.session_state["sample_load_error"] = (
+            f"Sample file not found: {SAMPLE_PATIENT_PATH}"
+        )
+        return
+
+    try:
+        sample_data = pd.read_csv(SAMPLE_PATIENT_PATH)
+        validated_sample = validate_batch_input(sample_data)
+
+        schema = load_guided_form_schema()
+        first_record = {
+            feature: validated_sample.iloc[0][feature]
+            for feature in schema["feature_order"]
+        }
+
+        st.session_state["single_patient_values"] = first_record
+        st.session_state["single_patient_form_step"] = len(FORM_STEPS)
+        invalidate_single_patient_results()
+        clear_single_patient_widget_state()
+
+        st.session_state["prediction_input_mode"] = "Enter One Patient"
+        st.session_state["sample_load_success"] = True
+        st.session_state.pop("sample_load_error", None)
+
+    except Exception as error:
+        st.session_state["sample_load_error"] = str(error)
+
+
+def render_single_patient_progress(current_step: int) -> None:
+    """Display the current position in the five-step workflow."""
+
+    step_titles = [
+        "Patient Profile",
+        "Hospital Encounter",
+        "Healthcare Use",
+        "Diabetes Management",
+        "Review",
+    ]
+
+    st.progress(
+        (current_step + 1) / len(step_titles),
+        text=f"Step {current_step + 1} of {len(step_titles)}",
+    )
+
+    progress_columns = st.columns(len(step_titles))
+
+    for index, title in enumerate(step_titles):
+        with progress_columns[index]:
+            if index < current_step:
+                st.markdown(f"✅ **{index + 1}. {title}**")
+            elif index == current_step:
+                st.markdown(f"🔷 **{index + 1}. {title}**")
+            else:
+                st.caption(f"{index + 1}. {title}")
+
+
+def render_single_input_field(
+    feature: str,
+    schema: dict,
+) -> None:
+    """Render one schema-controlled patient input widget."""
+
+    patient_values = st.session_state["single_patient_values"]
+    widget_key = f"single_input_{feature}"
+    field_label = get_feature_label(feature)
+    field_help = get_feature_help(feature)
+
+    if feature in schema["numeric_features"]:
+        settings = schema["numeric_features"][feature]
+
+        if widget_key not in st.session_state:
+            st.session_state[widget_key] = patient_values.get(
+                feature,
+                settings["default"],
+            )
+
+        entered_value = st.number_input(
+            field_label,
+            min_value=settings["minimum"],
+            max_value=settings["maximum"],
+            step=settings["step"],
+            key=widget_key,
+            help=field_help,
+            on_change=invalidate_single_patient_results,
+        )
+
+        patient_values[feature] = entered_value
+        return
+
+    settings = schema["categorical_features"][feature]
+    options = settings["options"]
+
+    current_value = str(
+        patient_values.get(feature, settings["default"])
+    )
+
+    if current_value not in options:
+        current_value = str(settings["default"])
+
+    if widget_key not in st.session_state:
+        st.session_state[widget_key] = current_value
+
+    selected_value = st.selectbox(
+        field_label,
+        options=options,
+        key=widget_key,
+        help=field_help,
+        format_func=lambda value, current_feature=feature: (
+            get_option_label(current_feature, value)
+        ),
+        on_change=invalidate_single_patient_results,
+    )
+
+    patient_values[feature] = selected_value
+
+
+def render_field_grid(
+    features: list[str],
+    schema: dict,
+    column_count: int = 3,
+) -> None:
+    """Render several input fields in a responsive column grid."""
+
+    columns = st.columns(column_count)
+
+    for index, feature in enumerate(features):
+        with columns[index % column_count]:
+            render_single_input_field(feature, schema)
+
+
+def render_diabetes_management_fields(schema: dict) -> None:
+    """Render primary diabetes inputs and detailed medication fields."""
+
+    st.markdown("#### Diabetes Tests and Treatment")
+    render_field_grid(
+        PRIMARY_DIABETES_FIELDS,
+        schema,
+        column_count=3,
+    )
+
+    with st.expander(
+        "Additional Diabetes Medication Details",
+        expanded=False,
+    ):
+        st.caption(
+            "Review each medication. Status options describe whether the "
+            "medication was not prescribed, remained steady, increased, "
+            "or decreased."
+        )
+        render_field_grid(
+            ADDITIONAL_MEDICATION_FIELDS,
+            schema,
+            column_count=3,
+        )
+
+
+def readable_form_value(
+    feature: str,
+    value,
+    schema: dict,
+) -> str:
+    """Return a readable form value for the review screen."""
+
+    if feature in schema["categorical_features"]:
+        return get_option_label(feature, value)
+
+    if feature == "time_in_hospital":
+        return f"{value} day(s)"
+
+    return str(value)
+
+
+def render_single_patient_review(schema: dict) -> None:
+    """Display all entered values before prediction."""
+
+    patient_values = st.session_state["single_patient_values"]
+
+    st.subheader("Review Entered Information")
+    st.write(
+        "Confirm the information below before calculating the "
+        "30-day readmission-risk estimate."
+    )
+
+    for section in FORM_STEPS:
+        st.markdown(f"#### {section['title']}")
+
+        review_rows = [
+            {
+                "Field": get_feature_label(feature),
+                "Entered Value": readable_form_value(
+                    feature,
+                    patient_values[feature],
+                    schema,
+                ),
+            }
+            for feature in section["fields"]
+        ]
+
+        st.dataframe(
+            pd.DataFrame(review_rows),
+            hide_index=True,
+            width="stretch",
+        )
+
+    st.warning(
+        "This is an academic decision-support prototype. Confirm that all "
+        "values are correct and appropriately de-identified."
+    )
+
+
+def calculate_single_patient_results(schema: dict) -> None:
+    """Calculate and store a direct-entry prediction and explanation."""
+
+    patient_values = {
+        feature: st.session_state["single_patient_values"][feature]
+        for feature in schema["feature_order"]
+    }
+
+    prediction_result = predict_readmission(patient_values)
+
+    input_dataframe = pd.DataFrame(
+        [patient_values],
+        columns=schema["feature_order"],
+    )
+
+    explanation_result = explain_readmission_batch(
+        input_dataframe,
+        top_n=5,
+    )
+
+    standard_result = (
+        "Review Recommended"
+        if prediction_result["main_threshold_prediction"] == 1
+        else "Standard Review Not Triggered"
+    )
+
+    additional_result = (
+        "Additional Screening Recommended"
+        if prediction_result["recall_focused_prediction"] == 1
+        else "No Additional Screening Flag"
+    )
+
+    screening_row = {
+        "Estimated 30-Day Readmission Risk (%)": round(
+            prediction_result["probability_percentage"],
+            4,
+        ),
+        "Standard Review Cutoff": prediction_result["main_threshold"],
+        "Standard Review Result": standard_result,
+        "Additional Screening Cutoff": (
+            prediction_result["recall_focused_threshold"]
+        ),
+        "Additional Screening Result": additional_result,
+        **patient_values,
+    }
+
+    explanation_download = explanation_result[
+        [
+            "Record Number",
+            "Readmission Probability (%)",
+            "Direction",
+            "Factor Rank",
+            "Feature",
+            "Patient Value",
+            "Original Feature",
+        ]
+    ].copy()
+
+    st.session_state["single_prediction_result"] = prediction_result
+    st.session_state["single_explanation_result"] = explanation_result
+    st.session_state["single_screening_download"] = (
+        pd.DataFrame([screening_row])
+        .to_csv(index=False)
+        .encode("utf-8")
+    )
+    st.session_state["single_explanation_download"] = (
+        explanation_download
+        .to_csv(index=False)
+        .encode("utf-8")
+    )
+
+
+def render_single_patient_results(schema: dict) -> None:
+    """Display a direct-entry prediction and its strongest factors."""
+
+    prediction_result = st.session_state.get(
+        "single_prediction_result"
+    )
+    explanation_result = st.session_state.get(
+        "single_explanation_result"
+    )
+
+    if prediction_result is None or explanation_result is None:
+        return
+
+    probability_percentage = float(
+        prediction_result["probability_percentage"]
+    )
+
+    standard_flagged = (
+        prediction_result["main_threshold_prediction"] == 1
+    )
+    additional_flagged = (
+        prediction_result["recall_focused_prediction"] == 1
+    )
+
+    st.divider()
+    st.subheader("30-Day Readmission Screening Result")
+
+    result_col1, result_col2, result_col3 = st.columns(3)
+
+    with result_col1:
+        st.metric(
+            "Estimated 30-Day Readmission Risk",
+            f"{probability_percentage:.2f}%",
+        )
+
+    with result_col2:
+        st.markdown("**Standard Review Result**")
+        if standard_flagged:
+            st.warning("Review Recommended")
+        else:
+            st.success("Standard Review Not Triggered")
+
+    with result_col3:
+        st.markdown("**Additional Screening Result**")
+        if additional_flagged:
+            st.warning("Additional Screening Recommended")
+        else:
+            st.success("No Additional Screening Flag")
+
+    st.markdown("#### Estimated Probability")
+    st.progress(
+        min(max(probability_percentage / 100, 0.0), 1.0),
+        text=f"{probability_percentage:.2f}%",
+    )
+    st.caption(
+        "Additional screening cutoff: 45% · "
+        "Standard review cutoff: 50%"
+    )
+
+    st.markdown("#### Why the Model Produced This Result")
+    st.caption(
+        "These factors explain the model calculation for this record. "
+        "They do not prove that a factor caused or prevented readmission."
+    )
+
+    increasing_factors = explanation_result[
+        explanation_result["Direction"]
+        == "Increases estimated readmission risk"
+    ].sort_values("Factor Rank")
+
+    reducing_factors = explanation_result[
+        explanation_result["Direction"]
+        == "Reduces estimated readmission risk"
+    ].sort_values("Factor Rank")
+
+    factor_col1, factor_col2 = st.columns(2)
+
+    with factor_col1:
+        st.markdown("##### Factors increasing the estimated risk")
+        if increasing_factors.empty:
+            st.write("No meaningful increasing factors were identified.")
+        else:
+            for _, factor in increasing_factors.iterrows():
+                feature = factor["Original Feature"]
+                value = readable_form_value(
+                    feature,
+                    factor["Patient Value"],
+                    schema,
+                )
+                st.markdown(
+                    f"- **{factor['Feature']}**: {value}"
+                )
+
+    with factor_col2:
+        st.markdown("##### Factors reducing the estimated risk")
+        if reducing_factors.empty:
+            st.write("No meaningful reducing factors were identified.")
+        else:
+            for _, factor in reducing_factors.iterrows():
+                feature = factor["Original Feature"]
+                value = readable_form_value(
+                    feature,
+                    factor["Patient Value"],
+                    schema,
+                )
+                st.markdown(
+                    f"- **{factor['Feature']}**: {value}"
+                )
+
+    st.info(
+        "A factor can influence another record differently because the "
+        "prediction depends on all entered values and their interactions."
+    )
+
+    download_col1, download_col2 = st.columns(2)
+
+    with download_col1:
+        screening_download = st.session_state.get(
+            "single_screening_download"
+        )
+        if screening_download is not None:
+            st.download_button(
+                "Download Screening Result",
+                data=screening_download,
+                file_name=(
+                    "single_patient_readmission_screening_result.csv"
+                ),
+                mime="text/csv",
+                type="primary",
+                use_container_width=True,
+            )
+
+    with download_col2:
+        explanation_download = st.session_state.get(
+            "single_explanation_download"
+        )
+        if explanation_download is not None:
+            st.download_button(
+                "Download Prediction Factors",
+                data=explanation_download,
+                file_name=(
+                    "single_patient_readmission_prediction_factors.csv"
+                ),
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+
+def render_single_patient_form() -> None:
+    """Render the complete five-step guided patient-entry form."""
+
+    initialize_single_patient_state()
+    schema = load_guided_form_schema()
+
+    current_step = int(
+        st.session_state.get("single_patient_form_step", 0)
+    )
+    current_step = max(0, min(current_step, len(FORM_STEPS)))
+    st.session_state["single_patient_form_step"] = current_step
+
+    render_single_patient_progress(current_step)
+    st.divider()
+
+    if current_step < len(FORM_STEPS):
+        section = FORM_STEPS[current_step]
+
+        st.subheader(section["title"])
+        st.write(section["description"])
+
+        if section["key"] == "diabetes_management":
+            render_diabetes_management_fields(schema)
+        else:
+            render_field_grid(
+                section["fields"],
+                schema,
+                column_count=3,
+            )
+
+        st.caption(
+            "Schema defaults are provided for convenience. Review every "
+            "field before calculating a prediction."
+        )
+
+    else:
+        render_single_patient_review(schema)
+
+    st.divider()
+
+    navigation_col1, navigation_col2, navigation_col3 = st.columns(
+        [1, 1, 1]
+    )
+
+    with navigation_col1:
+        if st.button(
+            "← Previous",
+            disabled=current_step == 0,
+            use_container_width=True,
+            key="single_form_previous",
+        ):
+            st.session_state["single_patient_form_step"] = (
+                current_step - 1
+            )
+            st.rerun()
+
+    with navigation_col2:
+        st.button(
+            "Reset Form",
+            use_container_width=True,
+            key="single_form_reset",
+            on_click=reset_single_patient_form,
+        )
+
+    with navigation_col3:
+        if current_step < len(FORM_STEPS):
+            if st.button(
+                "Next →",
+                type="primary",
+                use_container_width=True,
+                key="single_form_next",
+            ):
+                st.session_state["single_patient_form_step"] = (
+                    current_step + 1
+                )
+                st.rerun()
+        else:
+            if st.button(
+                "Calculate Readmission Risk",
+                type="primary",
+                use_container_width=True,
+                key="single_form_calculate",
+            ):
+                try:
+                    with st.spinner(
+                        "Calculating the readmission-risk estimate..."
+                    ):
+                        calculate_single_patient_results(schema)
+                except Exception as error:
+                    st.error(
+                        "The direct-entry prediction could not be calculated."
+                    )
+                    st.exception(error)
+
+    render_single_patient_results(schema)
 
 
 # ---------------------------------------------------------
@@ -608,7 +1237,7 @@ def create_user_friendly_screening_results(
             {
                 "Flagged at Main Threshold": "Review Recommended",
                 "Not Flagged at Main Threshold": (
-                    "No Standard Review Flag"
+                    "Standard Review Not Triggered"
                 ),
             }
         )
@@ -649,102 +1278,132 @@ def create_user_friendly_screening_results(
 # Page sections
 # ---------------------------------------------------------
 def render_project_overview() -> None:
-    st.header("Project Overview")
+    """Render the redesigned project overview page."""
 
-    st.markdown(
-        """
-        This capstone developed a machine-learning decision-support system
-        for estimating the risk of hospital readmission within 30 days.
-        The finalized Tuned XGBoost model is evaluated at two operating
-        thresholds and is available through a CSV-based prediction workflow.
-        """
+    render_page_hero(
+        "Hospital Readmission Risk Prediction",
+        (
+            "Identify hospital encounters that may benefit from additional "
+            "follow-up review using a finalized machine-learning screening "
+            "pipeline and record-level explanations."
+        ),
+        icon="🏥",
     )
 
-    status_col1, status_col2, status_col3, status_col4 = st.columns(4)
-    with status_col1:
-        st.metric("Project Status", "Completed")
-    with status_col2:
-        st.metric("Final Model", "Tuned XGBoost")
-    with status_col3:
-        st.metric("Main Threshold", "0.50")
-    with status_col4:
-        st.metric("Screening Threshold", "0.45")
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
 
-    st.divider()
-
-    overview_col1, overview_col2 = st.columns(2)
-
-    with overview_col1:
-        st.subheader("Business Problem")
-        st.write(
-            """
-            Hospital readmissions can increase healthcare costs and may
-            indicate that some patients require additional follow-up after
-            discharge. Earlier risk identification can support prioritization
-            of post-discharge review and intervention resources.
-            """
+    with metric_col1:
+        render_metric_card(
+            "Historical Encounters",
+            "99,343",
+            note="Cleaned modeling dataset",
+            icon="▦",
         )
 
-        st.subheader("Project Objective")
-        st.write(
-            """
-            Develop, compare, tune, evaluate, and explain machine-learning
-            models that estimate whether a hospital encounter is associated
-            with readmission within 30 days.
-            """
+    with metric_col2:
+        render_metric_card(
+            "Unique Patients",
+            "69,990",
+            note="Patient-level grouping retained",
+            icon="◎",
         )
 
-    with overview_col2:
-        st.subheader("Prediction Target")
-        st.markdown(
-            """
-            The target variable is **readmitted_30**:
-
-            - **1:** Readmitted within 30 days
-            - **0:** Not readmitted within 30 days
-            """
+    with metric_col3:
+        render_metric_card(
+            "30-Day Readmission Rate",
+            "11.39%",
+            note="Positive target class",
+            icon="↗",
         )
 
-        st.subheader("Modeling Priority")
-        st.write(
-            """
-            Recall was prioritized because missing a true readmission is
-            important in a screening context. Accuracy, precision,
-            specificity, balanced accuracy, F1-score, ROC-AUC, PR-AUC,
-            false positives, and false negatives were considered together.
-            """
+    with metric_col4:
+        render_metric_card(
+            "Final Model",
+            "Tuned XGBoost",
+            note="43 raw predictors",
+            icon="◆",
         )
 
-    st.subheader("Completed Project Workflow")
     st.markdown(
-        """
-        1. **Data audit and cleaning** — Completed  
-        2. **Exploratory data analysis** — Completed  
-        3. **Patient-level splitting and preprocessing** — Completed  
-        4. **Baseline and candidate model evaluation** — Completed  
-        5. **Model tuning and threshold analysis** — Completed  
-        6. **Final model and threshold selection** — Completed  
-        7. **Untouched test-set evaluation** — Completed  
-        8. **Model explainability analysis** — Completed  
-        9. **CSV-based Streamlit prediction workflow** — Completed
-        """
+        '<div class="hr-section-title">How the application works</div>',
+        unsafe_allow_html=True,
+    )
+    render_three_step_workflow()
+
+    info_col1, info_col2, info_col3 = st.columns(3)
+
+    with info_col1:
+        render_info_card(
+            "Business Problem",
+            (
+                "Hospital readmissions can increase healthcare costs and "
+                "may indicate that some patients need additional follow-up "
+                "after discharge. Earlier screening can support prioritizing "
+                "post-discharge review resources."
+            ),
+            icon="▥",
+        )
+
+    with info_col2:
+        render_info_card(
+            "Prediction Target",
+            (
+                "The target is readmitted_30. A value of 1 represents "
+                "readmission within 30 days; a value of 0 represents no "
+                "readmission within 30 days."
+            ),
+            icon="◎",
+        )
+
+    with info_col3:
+        render_info_card(
+            "Modeling Priority",
+            (
+                "Recall was prioritized because missing a true readmission "
+                "is important in a screening context. Precision, specificity, "
+                "PR-AUC, ROC-AUC, false positives, and false negatives were "
+                "considered together."
+            ),
+            icon="♟",
+        )
+
+    st.markdown(
+        '<div class="hr-section-title">Final operating points</div>',
+        unsafe_allow_html=True,
     )
 
-    st.info(
-        "The finalized model is Tuned XGBoost. Threshold 0.50 is the main "
-        "balanced operating point, while threshold 0.45 is the "
-        "recall-focused screening option."
+    threshold_col1, threshold_col2 = st.columns(2)
+
+    with threshold_col1:
+        st.info(
+            "**Standard review cutoff — 0.50**  \n"
+            "Main balanced operating point for routine review."
+        )
+
+    with threshold_col2:
+        st.warning(
+            "**Additional screening cutoff — 0.45**  \n"
+            "Lower cutoff designed to identify more encounters for review."
+        )
+
+    st.caption(
+        "The application is an academic decision-support prototype. "
+        "Predictions are not diagnoses and must not replace clinical judgment."
     )
 
 
 def render_dataset_summary() -> None:
-    st.header("Dataset Summary")
-    st.write(
-        """
-        The summary below is calculated from the cleaned modeling dataset.
-        Identifiers are retained for tracking and patient-level grouping but
-        are not used as model predictors.
-        """
+    """Render the redesigned dataset summary page."""
+
+    render_page_hero(
+        "Dataset Summary",
+        (
+            "Review the cleaned modeling population, target balance, "
+            "predictor count, and identifier-handling decisions used by "
+            "the finalized readmission-risk pipeline."
+        ),
+        eyebrow="Data Foundation",
+        icon="▦",
     )
 
     if not DATASET_PATH.exists():
@@ -757,32 +1416,49 @@ def render_dataset_summary() -> None:
     try:
         summary = load_dataset_summary(str(DATASET_PATH))
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Encounters", f"{summary['total_encounters']:,}")
-        with col2:
-            st.metric(
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+        with metric_col1:
+            render_metric_card(
+                "Historical Encounters",
+                f"{summary['total_encounters']:,}",
+                note="Cleaned hospital encounters",
+                icon="▦",
+            )
+
+        with metric_col2:
+            render_metric_card(
                 "Unique Patients",
                 (
                     f"{summary['unique_patients']:,}"
                     if summary["unique_patients"] is not None
                     else "Unavailable"
                 ),
+                note="Used for patient-level grouping",
+                icon="◎",
             )
-        with col3:
-            st.metric("Dataset Columns", f"{summary['total_columns']:,}")
 
-        col4, col5 = st.columns(2)
-        with col4:
-            st.metric("Modeling Predictors", f"{summary['predictor_count']:,}")
-        with col5:
+        with metric_col3:
+            render_metric_card(
+                "Modeling Predictors",
+                f"{summary['predictor_count']:,}",
+                note="8 numeric and 35 categorical",
+                icon="◆",
+            )
+
+        with metric_col4:
             rate = summary["readmitted_rate"]
-            st.metric(
+            render_metric_card(
                 "30-Day Readmission Rate",
                 f"{rate:.2f}%" if rate is not None else "Unavailable",
+                note="Positive target class",
+                icon="↗",
             )
 
-        st.subheader("Target Class Distribution")
+        st.markdown(
+            '<div class="hr-section-title">Target class distribution</div>',
+            unsafe_allow_html=True,
+        )
 
         if (
             summary["not_readmitted_count"] is not None
@@ -794,12 +1470,11 @@ def render_dataset_summary() -> None:
             )
             class_distribution = pd.DataFrame(
                 {
-                    "Target Value": [0, 1],
-                    "Target Meaning": [
+                    "Target": [
                         "Not readmitted within 30 days",
                         "Readmitted within 30 days",
                     ],
-                    "Number of Encounters": [
+                    "Encounters": [
                         summary["not_readmitted_count"],
                         summary["readmitted_count"],
                     ],
@@ -810,23 +1485,179 @@ def render_dataset_summary() -> None:
                 }
             )
 
-            st.dataframe(
-                class_distribution,
-                hide_index=True,
-                width="stretch",
-                column_config={
-                    "Percentage": st.column_config.NumberColumn(
-                        "Percentage",
-                        format="%.2f%%",
+            chart_col, table_col = st.columns([1.05, 1])
+
+            with chart_col:
+                with st.container(border=True):
+                    st.markdown("#### Class balance")
+                    target_chart_data = class_distribution.copy()
+                    target_chart_data["Target Label"] = [
+                        "Not readmitted",
+                        "Readmitted within 30 days",
+                    ]
+
+                    base_chart = (
+                        alt.Chart(target_chart_data)
+                        .encode(
+                            y=alt.Y(
+                                "Target Label:N",
+                                title=None,
+                                sort=[
+                                    "Not readmitted",
+                                    "Readmitted within 30 days",
+                                ],
+                                axis=alt.Axis(
+                                    labelLimit=230,
+                                    labelPadding=8,
+                                ),
+                            ),
+                            x=alt.X(
+                                "Encounters:Q",
+                                title="Number of encounters",
+                                scale=alt.Scale(
+                                    domain=[0, 95000],
+                                    nice=False,
+                                ),
+                                axis=alt.Axis(
+                                    values=[
+                                        0,
+                                        10000,
+                                        20000,
+                                        30000,
+                                        40000,
+                                        50000,
+                                        60000,
+                                        70000,
+                                        80000,
+                                        90000,
+                                    ],
+                                    labelExpr=(
+                                        "datum.value === 0 ? '0' : "
+                                        "(datum.value / 1000) + ',000'"
+                                    ),
+                                    labelFlush=False,
+                                ),
+                            ),
+                            tooltip=[
+                                alt.Tooltip(
+                                    "Target Label:N",
+                                    title="Target",
+                                ),
+                                alt.Tooltip(
+                                    "Encounters:Q",
+                                    title="Encounters",
+                                    format=",",
+                                ),
+                                alt.Tooltip(
+                                    "Percentage:Q",
+                                    title="Percentage",
+                                    format=".2f",
+                                ),
+                            ],
+                        )
                     )
-                },
+
+                    target_bars = base_chart.mark_bar(
+                        cornerRadiusTopRight=6,
+                        cornerRadiusBottomRight=6,
+                    ).encode(
+                        color=alt.Color(
+                            "Target Label:N",
+                            legend=None,
+                            scale=alt.Scale(
+                                domain=[
+                                    "Not readmitted",
+                                    "Readmitted within 30 days",
+                                ],
+                                range=[
+                                    "#2878D0",
+                                    "#0F8F8D",
+                                ],
+                            ),
+                        ),
+                    )
+
+                    target_labels = base_chart.mark_text(
+                        align="right",
+                        baseline="middle",
+                        dx=-10,
+                        color="white",
+                        fontWeight="bold",
+                        fontSize=13,
+                    ).encode(
+                        text=alt.Text(
+                            "Encounters:Q",
+                            format=",",
+                        )
+                    )
+
+                    target_chart = (
+                        target_bars
+                        + target_labels
+                    ).properties(
+                        height=260,
+                    )
+
+                    st.altair_chart(
+                        target_chart,
+                        use_container_width=True,
+                    )
+
+                    st.caption(
+                        "The positive class represents 11.39% of encounters, "
+                        "so accuracy alone is not sufficient for evaluation."
+                    )
+
+            with table_col:
+                with st.container(border=True):
+                    st.markdown("#### Distribution details")
+                    st.dataframe(
+                        class_distribution,
+                        hide_index=True,
+                        width="stretch",
+                        column_config={
+                            "Percentage": st.column_config.NumberColumn(
+                                "Percentage",
+                                format="%.2f%%",
+                            )
+                        },
+                    )
+
+                    render_key_message(
+                        "Why patient-level grouping matters",
+                        (
+                            "The same patient must not appear in both model "
+                            "development and evaluation groups because that "
+                            "would create data leakage and overstate performance."
+                        ),
+                        icon="i",
+                        tone="blue",
+                    )
+
+        info_col1, info_col2 = st.columns(2)
+
+        with info_col1:
+            render_info_card(
+                "Identifiers",
+                (
+                    "encounter_id is retained only for encounter tracking. "
+                    "patient_nbr is retained only for patient-level splitting "
+                    "and grouping. Neither identifier is used as a predictor."
+                ),
+                icon="#",
             )
 
-        st.info(
-            "`encounter_id` is used for encounter tracking and "
-            "`patient_nbr` is used for patient-level grouping. Neither is "
-            "used as a prediction input."
-        )
+        with info_col2:
+            render_info_card(
+                "Cleaned modeling table",
+                (
+                    f"The final table contains {summary['total_columns']} "
+                    "columns, no missing values in the audited modeling data, "
+                    "and the binary target readmitted_30."
+                ),
+                icon="✓",
+            )
+
         st.caption(
             "Source: data/processed/diabetic_modeling_data_final.csv"
         )
@@ -837,14 +1668,16 @@ def render_dataset_summary() -> None:
 
 
 def render_model_development() -> None:
-    st.header("Model Development Comparison")
-    st.write(
-        """
-        These are development and validation results from the baseline,
-        candidate, tuned, and threshold-analysis stages. They explain how
-        the final model decision was reached; they are separate from the
-        final untouched test-set evaluation.
-        """
+    """Render the redesigned model-development page."""
+
+    render_page_hero(
+        "Model Development",
+        (
+            "Compare baseline, candidate, tuned, and threshold-analysis "
+            "configurations used to select the finalized Tuned XGBoost model."
+        ),
+        eyebrow="Model Selection",
+        icon="◫",
     )
 
     if not MODEL_COMPARISON_PATH.exists():
@@ -857,65 +1690,103 @@ def render_model_development() -> None:
     try:
         comparison = load_model_comparison(str(MODEL_COMPARISON_PATH))
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Compared Configurations", f"{len(comparison):,}")
-        with col2:
-            st.metric(
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+        with metric_col1:
+            render_metric_card(
+                "Configurations Compared",
+                f"{len(comparison):,}",
+                note="Development-stage evaluations",
+                icon="▤",
+            )
+
+        with metric_col2:
+            render_metric_card(
                 "Highest Development Recall",
                 f"{comparison['Recall (%)'].max():.2f}%",
+                note="Not selected using recall alone",
+                icon="↗",
             )
-        with col3:
-            st.metric(
+
+        with metric_col3:
+            render_metric_card(
                 "Highest Development Accuracy",
                 f"{comparison['Accuracy (%)'].max():.2f}%",
+                note="Accuracy interpreted cautiously",
+                icon="◎",
             )
 
-        st.caption(
-            "The highest recall and highest accuracy can come from different "
-            "configurations. Final selection considered the complete metric "
-            "trade-off rather than a single value."
+        with metric_col4:
+            render_metric_card(
+                "Final Model",
+                "Tuned XGBoost",
+                note="Selected for overall balance and PR-AUC",
+                icon="◆",
+            )
+
+        render_key_message(
+            "Selection principle",
+            (
+                "The strongest recall and strongest accuracy came from "
+                "different configurations. Final selection considered "
+                "recall, precision, specificity, balanced accuracy, F1, "
+                "ROC-AUC, PR-AUC, false positives, and false negatives."
+            ),
+            icon="i",
+            tone="teal",
         )
 
-        key_columns = [
-            "Analysis Stage",
-            "Model",
-            "Threshold",
-            "Accuracy (%)",
-            "Balanced Accuracy (%)",
-            "Precision (%)",
-            "Recall (%)",
-            "Specificity (%)",
-            "F1 Score (%)",
-            "ROC-AUC (%)",
-            "PR-AUC (%)",
-        ]
-
-        number_columns = {
-            column: st.column_config.NumberColumn(column, format="%.2f")
-            for column in key_columns
-            if column not in ["Analysis Stage", "Model"]
-        }
-
-        st.dataframe(
-            comparison[key_columns],
-            hide_index=True,
-            width="stretch",
-            height=600,
-            column_config={
-                "Analysis Stage": st.column_config.TextColumn(
-                    "Analysis Stage",
-                    width="medium",
-                ),
-                "Model": st.column_config.TextColumn(
-                    "Model Configuration",
-                    width="large",
-                ),
-                **number_columns,
-            },
+        tab1, tab2, tab3 = st.tabs(
+            [
+                "Key Metrics",
+                "Confusion Counts",
+                "Modeling Notes",
+            ]
         )
 
-        with st.expander("View confusion-matrix counts"):
+        with tab1:
+            key_columns = [
+                "Analysis Stage",
+                "Model",
+                "Threshold",
+                "Accuracy (%)",
+                "Balanced Accuracy (%)",
+                "Precision (%)",
+                "Recall (%)",
+                "Specificity (%)",
+                "F1 Score (%)",
+                "ROC-AUC (%)",
+                "PR-AUC (%)",
+            ]
+
+            number_columns = {
+                column: st.column_config.NumberColumn(
+                    column,
+                    format="%.2f",
+                )
+                for column in key_columns
+                if column not in ["Analysis Stage", "Model"]
+            }
+
+            st.dataframe(
+                comparison[key_columns],
+                hide_index=True,
+                width="stretch",
+                height=590,
+                column_config={
+                    "Analysis Stage": st.column_config.TextColumn(
+                        "Analysis Stage",
+                        width="medium",
+                    ),
+                    "Model": st.column_config.TextColumn(
+                        "Model Configuration",
+                        width="large",
+                    ),
+                    **number_columns,
+                },
+            )
+
+        with tab2:
             st.dataframe(
                 comparison[
                     [
@@ -929,13 +1800,45 @@ def render_model_development() -> None:
                 ],
                 hide_index=True,
                 width="stretch",
+                height=520,
             )
 
-        st.info(
-            "Recall was treated as a priority, but it was interpreted with "
-            "precision, specificity, false positives, false negatives, and "
-            "operational usefulness."
-        )
+        with tab3:
+            note_col1, note_col2, note_col3 = st.columns(3)
+
+            with note_col1:
+                render_info_card(
+                    "Baseline stage",
+                    (
+                        "Dummy and baseline models established reference "
+                        "performance and demonstrated that majority-class "
+                        "accuracy was not clinically useful."
+                    ),
+                    icon="1",
+                )
+
+            with note_col2:
+                render_info_card(
+                    "Candidate and tuning stage",
+                    (
+                        "Logistic regression, tree-based ensembles, boosting "
+                        "models, and class-imbalance strategies were compared "
+                        "using validation metrics."
+                    ),
+                    icon="2",
+                )
+
+            with note_col3:
+                render_info_card(
+                    "Threshold stage",
+                    (
+                        "The finalized model was evaluated at multiple "
+                        "operating thresholds to balance additional recall "
+                        "against increased false-positive review volume."
+                    ),
+                    icon="3",
+                )
+
         st.caption(
             "Source: outputs/metrics/"
             "dynamic_all_model_comparison_summary.csv"
@@ -947,22 +1850,18 @@ def render_model_development() -> None:
 
 
 def render_final_evaluation() -> None:
-    st.header("Final Model Evaluation")
+    """Render the redesigned final evaluation page."""
 
-    st.success(
-        "Tuned XGBoost was selected as the final model and evaluated once "
-        "on the previously untouched test set."
+    render_page_hero(
+        "Final Model Evaluation",
+        (
+            "Review the one-time untouched test-set performance of the "
+            "finalized Tuned XGBoost model at the two selected screening "
+            "cutoffs."
+        ),
+        eyebrow="Untouched Test Set",
+        icon="✓",
     )
-
-    model_col1, model_col2, model_col3, model_col4 = st.columns(4)
-    with model_col1:
-        st.metric("Final Model", "Tuned XGBoost")
-    with model_col2:
-        st.metric("Test Encounters", "14,976")
-    with model_col3:
-        st.metric("Main Threshold", "0.50")
-    with model_col4:
-        st.metric("Screening Threshold", "0.45")
 
     if not FINAL_THRESHOLD_RESULTS_PATH.exists():
         st.error(
@@ -976,60 +1875,74 @@ def render_final_evaluation() -> None:
             str(FINAL_THRESHOLD_RESULTS_PATH)
         )
 
-        st.subheader("Final Untouched Test-Set Results")
-        st.dataframe(
-            final_results,
-            hide_index=True,
-            width="stretch",
-            column_config={
-                column: st.column_config.NumberColumn(
-                    column,
-                    format="%.2f",
-                )
-                for column in [
-                    "Threshold",
-                    "Accuracy (%)",
-                    "Balanced Accuracy (%)",
-                    "Precision (%)",
-                    "Recall (%)",
-                    "Specificity (%)",
-                    "F1 Score (%)",
-                    "ROC-AUC (%)",
-                    "PR-AUC (%)",
-                ]
-            },
-        )
-
         main_row = find_threshold_row(final_results, 0.50)
         recall_row = find_threshold_row(final_results, 0.45)
 
-        st.subheader("Threshold Interpretation")
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+        with metric_col1:
+            render_metric_card(
+                "Final Model",
+                "Tuned XGBoost",
+                note="One-time untouched test evaluation",
+                icon="◆",
+            )
+
+        with metric_col2:
+            render_metric_card(
+                "Test Encounters",
+                "14,976",
+                note="Previously unseen patient groups",
+                icon="▦",
+            )
+
+        with metric_col3:
+            render_metric_card(
+                "ROC-AUC",
+                "66.39%",
+                note="Threshold-independent discrimination",
+                icon="↗",
+            )
+
+        with metric_col4:
+            render_metric_card(
+                "PR-AUC",
+                "22.38%",
+                note="Important for the imbalanced target",
+                icon="◎",
+            )
+
+        st.markdown(
+            '<div class="hr-section-title">Final threshold comparison</div>',
+            unsafe_allow_html=True,
+        )
+
         threshold_col1, threshold_col2 = st.columns(2)
 
         with threshold_col1:
-            st.markdown("#### Main Balanced Threshold — 0.50")
-            st.markdown(
-                f"""
-                - Accuracy: **{metric_value(main_row, 'Accuracy (%)')}**
-                - Recall: **{metric_value(main_row, 'Recall (%)')}**
-                - Specificity: **{metric_value(main_row, 'Specificity (%)')}**
-                - Readmissions caught: **{integer_value(main_row, 'Readmissions Caught')}**
-                - Readmissions missed: **{integer_value(main_row, 'Readmissions Missed')}**
-                - False positives: **{integer_value(main_row, 'False Positives')}**
-                """
+            render_threshold_card(
+                "Standard review cutoff",
+                "0.50",
+                recall=metric_value(main_row, "Recall (%)"),
+                precision=metric_value(main_row, "Precision (%)"),
+                specificity=metric_value(main_row, "Specificity (%)"),
+                caught=integer_value(main_row, "Readmissions Caught"),
+                missed=integer_value(main_row, "Readmissions Missed"),
+                false_positives=integer_value(main_row, "False Positives"),
+                tone="teal",
             )
 
         with threshold_col2:
-            st.markdown("#### Recall-Focused Threshold — 0.45")
-            st.markdown(
-                f"""
-                - Accuracy: **{metric_value(recall_row, 'Accuracy (%)')}**
-                - Recall: **{metric_value(recall_row, 'Recall (%)')}**
-                - Specificity: **{metric_value(recall_row, 'Specificity (%)')}**
-                - Readmissions caught: **{integer_value(recall_row, 'Readmissions Caught')}**
-                - Readmissions missed: **{integer_value(recall_row, 'Readmissions Missed')}**
-                - False positives: **{integer_value(recall_row, 'False Positives')}**
-                """
+            render_threshold_card(
+                "Additional screening cutoff",
+                "0.45",
+                recall=metric_value(recall_row, "Recall (%)"),
+                precision=metric_value(recall_row, "Precision (%)"),
+                specificity=metric_value(recall_row, "Specificity (%)"),
+                caught=integer_value(recall_row, "Readmissions Caught"),
+                missed=integer_value(recall_row, "Readmissions Missed"),
+                false_positives=integer_value(recall_row, "False Positives"),
+                tone="blue",
             )
 
         if main_row is not None and recall_row is not None:
@@ -1042,18 +1955,42 @@ def render_final_evaluation() -> None:
                 - main_row["False Positives"]
             )
 
-            st.warning(
-                f"Lowering the threshold from 0.50 to 0.45 caught "
-                f"{additional_caught:,} additional readmissions, but it "
-                f"also generated {additional_false_positives:,} additional "
-                "false-positive alerts."
+            render_key_message(
+                "Operational trade-off",
+                (
+                    f"Lowering the cutoff from 0.50 to 0.45 caught "
+                    f"{additional_caught:,} additional readmissions but "
+                    f"generated {additional_false_positives:,} additional "
+                    "false-positive review alerts."
+                ),
+                icon="!",
+                tone="amber",
             )
 
-        st.info(
-            "Threshold 0.50 is the main balanced operating point. "
-            "Threshold 0.45 is the recall-focused screening option and "
-            "flags more encounters for additional review."
-        )
+        with st.expander("View complete untouched test-set table"):
+            st.dataframe(
+                final_results,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    column: st.column_config.NumberColumn(
+                        column,
+                        format="%.2f",
+                    )
+                    for column in [
+                        "Threshold",
+                        "Accuracy (%)",
+                        "Balanced Accuracy (%)",
+                        "Precision (%)",
+                        "Recall (%)",
+                        "Specificity (%)",
+                        "F1 Score (%)",
+                        "ROC-AUC (%)",
+                        "PR-AUC (%)",
+                    ]
+                },
+            )
+
         st.caption(
             "Source: outputs/metrics/"
             "notebook_7_final_threshold_comparison_table.csv"
@@ -1065,12 +2002,17 @@ def render_final_evaluation() -> None:
 
 
 def render_saved_figures() -> None:
-    st.header("Saved Figures")
-    st.write(
-        """
-        Review approved visualizations from model development, final
-        evaluation, and explainability analysis.
-        """
+    """Render the redesigned saved-figures gallery."""
+
+    render_page_hero(
+        "Saved Figures",
+        (
+            "Browse approved visualizations from baseline modeling, candidate "
+            "comparison, threshold analysis, final evaluation, and model "
+            "explainability."
+        ),
+        eyebrow="Visual Evidence",
+        icon="▧",
     )
 
     if not FIGURES_DIR.exists():
@@ -1094,11 +2036,39 @@ def render_saved_figures() -> None:
         st.error("None of the approved saved figures could be found.")
         return
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Approved Figures Found", len(available_figures))
-    with col2:
-        st.metric("Missing Approved Figures", len(missing_figures))
+    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+    with metric_col1:
+        render_metric_card(
+            "Approved Figures",
+            str(len(available_figures)),
+            note="Validated application visuals",
+            icon="▧",
+        )
+
+    with metric_col2:
+        render_metric_card(
+            "Missing Figures",
+            str(len(missing_figures)),
+            note="Expected to remain zero",
+            icon="!",
+        )
+
+    with metric_col3:
+        render_metric_card(
+            "Standard Cutoff",
+            "0.50",
+            note="Balanced operating point",
+            icon="◎",
+        )
+
+    with metric_col4:
+        render_metric_card(
+            "Additional Cutoff",
+            "0.45",
+            note="Recall-focused screening",
+            icon="↗",
+        )
 
     categories = []
     for information in available_figures.values():
@@ -1106,11 +2076,14 @@ def render_saved_figures() -> None:
         if category not in categories:
             categories.append(category)
 
-    selected_category = st.selectbox(
-        "Select an analysis stage",
-        options=categories,
-        key="figure_category",
-    )
+    filter_col1, filter_col2 = st.columns(2)
+
+    with filter_col1:
+        selected_category = st.selectbox(
+            "Analysis stage",
+            options=categories,
+            key="figure_category",
+        )
 
     category_figures = {
         label: information
@@ -1118,24 +2091,27 @@ def render_saved_figures() -> None:
         if information["category"] == selected_category
     }
 
-    selected_label = st.selectbox(
-        "Select a saved figure",
-        options=list(category_figures.keys()),
-        key="figure_selection",
-    )
+    with filter_col2:
+        selected_label = st.selectbox(
+            "Saved figure",
+            options=list(category_figures.keys()),
+            key="figure_selection",
+        )
 
     selected_figure = category_figures[selected_label]
-    st.subheader(selected_label)
-    st.write(selected_figure["description"])
-    st.image(
-        selected_figure["path"],
-        caption=selected_label,
-        width="stretch",
-    )
-    st.caption(
-        "Source: outputs/figures/"
-        f"{selected_figure['filename']}"
-    )
+
+    with st.container(border=True):
+        st.markdown(f"### {selected_label}")
+        st.write(selected_figure["description"])
+        st.image(
+            selected_figure["path"],
+            caption=selected_label,
+            width="stretch",
+        )
+        st.caption(
+            "Source: outputs/figures/"
+            f"{selected_figure['filename']}"
+        )
 
     with st.expander("View all approved figure filenames"):
         for label, information in available_figures.items():
@@ -1149,19 +2125,17 @@ def render_saved_figures() -> None:
 
 
 def render_explainability() -> None:
-    st.header("Model Explainability")
-    st.write(
-        """
-        Explainability analysis was completed after final model evaluation.
-        The table below presents global model drivers grouped back to the
-        original input features.
-        """
-    )
+    """Render the redesigned explainability page."""
 
-    st.info(
-        "Global importance describes overall model behavior. For an "
-        "explanation of a specific uploaded record, use the Patient Risk "
-        "Prediction page."
+    render_page_hero(
+        "Risk Insights",
+        (
+            "Understand the strongest global drivers of the finalized model "
+            "and how those global patterns differ from record-level "
+            "prediction explanations."
+        ),
+        eyebrow="Model Explainability",
+        icon="◆",
     )
 
     if not GLOBAL_SHAP_IMPORTANCE_PATH.exists():
@@ -1177,47 +2151,167 @@ def render_explainability() -> None:
         )
 
         top_features = shap_data.head(10).copy()
-        display_table = top_features[
-            [
-                "rank",
-                "Feature",
-                "total_mean_absolute_shap",
-                "mean_shap",
-                "number_transformed_features",
-            ]
-        ].rename(
-            columns={
-                "rank": "Rank",
-                "total_mean_absolute_shap": "Global SHAP Importance",
-                "mean_shap": "Average SHAP Direction",
-                "number_transformed_features": "Transformed Features",
-            }
+
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+
+        with metric_col1:
+            render_metric_card(
+                "Top Global Driver",
+                str(top_features.iloc[0]["Feature"]),
+                note="Highest grouped mean absolute SHAP",
+                icon="1",
+            )
+
+        with metric_col2:
+            render_metric_card(
+                "Original Predictors",
+                "43",
+                note="Grouped from transformed features",
+                icon="◆",
+            )
+
+        with metric_col3:
+            render_metric_card(
+                "Transformed Features",
+                "179",
+                note="Used by the final XGBoost model",
+                icon="▦",
+            )
+
+        render_key_message(
+            "Global importance is not causality",
+            (
+                "A high global SHAP importance means the model relied on a "
+                "feature frequently across the evaluation data. It does not "
+                "prove that the feature medically caused readmission."
+            ),
+            icon="i",
+            tone="blue",
         )
 
-        st.subheader("Top Global Model Drivers")
-        st.dataframe(
-            display_table,
-            hide_index=True,
-            width="stretch",
-            column_config={
-                "Global SHAP Importance": st.column_config.NumberColumn(
-                    "Global SHAP Importance",
-                    format="%.4f",
-                ),
-                "Average SHAP Direction": st.column_config.NumberColumn(
-                    "Average SHAP Direction",
-                    format="%.4f",
-                ),
-            },
-        )
+        chart_col, table_col = st.columns([1, 1.1])
 
-        top_names = top_features["Feature"].head(5).tolist()
-        st.info(
-            "The strongest global drivers include: "
-            + ", ".join(top_names)
-            + ". Their effect for an individual encounter depends on the "
-            "specific values entered and the model's interactions."
-        )
+        with chart_col:
+            with st.container(border=True):
+                st.markdown("#### Top grouped SHAP drivers")
+                chart_data = top_features[
+                    ["Feature", "total_mean_absolute_shap"]
+                ].rename(
+                    columns={
+                        "total_mean_absolute_shap": (
+                            "Global SHAP Importance"
+                        )
+                    }
+                )
+
+                shap_chart = (
+                    alt.Chart(chart_data)
+                    .mark_bar(
+                        color="#0F8F8D",
+                        cornerRadiusTopRight=6,
+                        cornerRadiusBottomRight=6,
+                    )
+                    .encode(
+                        y=alt.Y(
+                            "Feature:N",
+                            title=None,
+                            sort="-x",
+                            axis=alt.Axis(
+                                labelLimit=245,
+                                labelPadding=8,
+                            ),
+                        ),
+                        x=alt.X(
+                            "Global SHAP Importance:Q",
+                            title="Mean absolute SHAP value",
+                        ),
+                        tooltip=[
+                            alt.Tooltip(
+                                "Feature:N",
+                                title="Feature",
+                            ),
+                            alt.Tooltip(
+                                "Global SHAP Importance:Q",
+                                title="Global SHAP Importance",
+                                format=".4f",
+                            ),
+                        ],
+                    )
+                    .properties(height=430)
+                )
+
+                st.altair_chart(
+                    shap_chart,
+                    use_container_width=True,
+                )
+
+        with table_col:
+            with st.container(border=True):
+                st.markdown("#### Global driver details")
+                display_table = top_features[
+                    [
+                        "rank",
+                        "Feature",
+                        "total_mean_absolute_shap",
+                        "mean_shap",
+                        "number_transformed_features",
+                    ]
+                ].rename(
+                    columns={
+                        "rank": "Rank",
+                        "total_mean_absolute_shap": (
+                            "Global SHAP Importance"
+                        ),
+                        "mean_shap": "Average SHAP Direction",
+                        "number_transformed_features": (
+                            "Transformed Features"
+                        ),
+                    }
+                )
+
+                st.dataframe(
+                    display_table,
+                    hide_index=True,
+                    width="stretch",
+                    height=430,
+                    column_config={
+                        "Global SHAP Importance": (
+                            st.column_config.NumberColumn(
+                                "Global SHAP Importance",
+                                format="%.4f",
+                            )
+                        ),
+                        "Average SHAP Direction": (
+                            st.column_config.NumberColumn(
+                                "Average SHAP Direction",
+                                format="%.4f",
+                            )
+                        ),
+                    },
+                )
+
+        insight_col1, insight_col2 = st.columns(2)
+
+        with insight_col1:
+            render_info_card(
+                "Global explanation",
+                (
+                    "Summarizes the features the model relied on most across "
+                    "many encounters. It describes overall model behavior."
+                ),
+                icon="G",
+            )
+
+        with insight_col2:
+            render_info_card(
+                "Record-level explanation",
+                (
+                    "Shows the strongest factors increasing or reducing the "
+                    "estimated risk for one uploaded or manually entered "
+                    "encounter."
+                ),
+                icon="R",
+            )
 
         st.caption(
             "Source: outputs/metrics/"
@@ -1228,9 +2322,145 @@ def render_explainability() -> None:
         st.error("The explainability results could not be loaded.")
         st.exception(error)
 
-
 def render_prediction() -> None:
-    st.header("Patient Readmission Risk Prediction")
+    """Render the prediction page and its available input methods."""
+
+    render_page_hero(
+        "New Readmission Assessment",
+        (
+            "Enter one de-identified encounter, upload multiple records, "
+            "or load a synthetic sample. Every method uses the same 43 "
+            "predictors and finalized Tuned XGBoost pipeline."
+        ),
+        icon="✚",
+    )
+
+    st.info(
+        "Use only synthetic or appropriately de-identified records. "
+        "Do not enter patient names, medical record numbers, addresses, "
+        "dates of birth, or other direct identifiers."
+    )
+
+    input_mode = st.radio(
+        "Choose an input method",
+        options=[
+            "Enter One Patient",
+            "Upload Multiple Records",
+            "Use Sample Record",
+        ],
+        horizontal=True,
+        key="prediction_input_mode",
+    )
+
+    st.divider()
+
+    if input_mode == "Enter One Patient":
+        st.subheader("Enter One Patient")
+
+        if st.session_state.pop("sample_load_success", False):
+            st.success(
+                "Synthetic sample loaded successfully. Review the values "
+                "below, then calculate the readmission-risk estimate."
+            )
+
+        st.write(
+            """
+            Complete the guided workflow to enter one de-identified
+            hospital encounter, review all values, and calculate a
+            30-day readmission-risk estimate.
+            """
+        )
+        render_single_patient_form()
+
+    elif input_mode == "Upload Multiple Records":
+        render_batch_prediction()
+
+    elif input_mode == "Use Sample Record":
+        initialize_single_patient_state()
+        schema = load_guided_form_schema()
+
+        st.subheader("Use a Synthetic Sample Record")
+        st.write(
+            """
+            Load a synthetic demonstration record into the guided form,
+            review all 43 values, and calculate a prediction without using
+            real patient information.
+            """
+        )
+
+        sample_col1, sample_col2 = st.columns(2)
+        with sample_col1:
+            st.metric("Sample Predictors", schema["feature_count"])
+        with sample_col2:
+            st.metric("Sample Type", "Synthetic")
+
+        if SAMPLE_PATIENT_PATH.exists():
+            try:
+                sample_data = pd.read_csv(SAMPLE_PATIENT_PATH)
+                validated_sample = validate_batch_input(sample_data)
+
+                st.success(
+                    f"Sample file validated: "
+                    f"{len(validated_sample):,} record(s) and "
+                    f"{len(validated_sample.columns):,} columns."
+                )
+
+                preview_record = validated_sample.head(1).copy()
+                preview_record.columns = [
+                    get_feature_label(column)
+                    for column in preview_record.columns
+                ]
+
+                with st.expander(
+                    "Preview the synthetic sample values",
+                    expanded=False,
+                ):
+                    st.dataframe(
+                        preview_record,
+                        hide_index=True,
+                        width="stretch",
+                    )
+
+                st.button(
+                    "Load Sample and Review",
+                    type="primary",
+                    use_container_width=True,
+                    on_click=load_sample_record_into_form,
+                    key="load_sample_record_button",
+                )
+
+                st.caption(
+                    "After loading, the app opens Step 5 so you can review "
+                    "the sample before calculating its readmission-risk "
+                    "estimate."
+                )
+
+            except Exception as error:
+                st.error(
+                    "The synthetic sample record could not be validated."
+                )
+                st.exception(error)
+        else:
+            st.error(
+                "The synthetic sample file could not be found at: "
+                f"`{SAMPLE_PATIENT_PATH}`"
+            )
+
+        sample_error = st.session_state.pop(
+            "sample_load_error",
+            None,
+        )
+        if sample_error:
+            st.error(
+                "The sample could not be loaded into the guided form: "
+                f"{sample_error}"
+            )
+
+
+def render_batch_prediction() -> None:
+    """Render the existing CSV batch-prediction workflow."""
+
+    st.subheader("Upload Multiple Records")
     st.write(
         """
         Upload a CSV containing one or more hospital encounter records.
@@ -1531,7 +2761,7 @@ def render_prediction() -> None:
                 ):
                     st.warning("Review Recommended")
                 else:
-                    st.success("No Standard Review Flag")
+                    st.success("Standard Review Not Triggered")
 
             with explanation_col3:
                 st.markdown("**Additional Screening Result**")
@@ -1641,18 +2871,29 @@ def render_prediction() -> None:
 # Sidebar navigation
 # ---------------------------------------------------------
 with st.sidebar:
-    st.title("Project Navigation")
+    st.markdown(
+        """
+        <div class="hr-sidebar-brand">
+            <div class="hr-sidebar-logo">✚</div>
+            <div>
+                <div class="hr-sidebar-title">Readmission Risk Portal</div>
+                <div class="hr-sidebar-subtitle">ASDS 6306 Capstone</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     selected_page = st.radio(
         "Go to",
         options=[
-            "Project Overview",
-            "Dataset Summary",
+            "Overview",
+            "Data Explorer",
             "Model Development",
-            "Final Evaluation",
+            "Model Performance",
             "Saved Figures",
-            "Model Explainability",
-            "Patient Risk Prediction",
+            "Risk Insights",
+            "New Prediction",
         ],
         label_visibility="collapsed",
     )
@@ -1668,22 +2909,19 @@ with st.sidebar:
 # ---------------------------------------------------------
 # Main page heading and selected section
 # ---------------------------------------------------------
-st.title("🏥 Hospital Readmission Risk Prediction")
-st.subheader("ASDS 6306 Capstone Project")
-
-if selected_page == "Project Overview":
+if selected_page == "Overview":
     render_project_overview()
-elif selected_page == "Dataset Summary":
+elif selected_page == "Data Explorer":
     render_dataset_summary()
 elif selected_page == "Model Development":
     render_model_development()
-elif selected_page == "Final Evaluation":
+elif selected_page == "Model Performance":
     render_final_evaluation()
 elif selected_page == "Saved Figures":
     render_saved_figures()
-elif selected_page == "Model Explainability":
+elif selected_page == "Risk Insights":
     render_explainability()
-elif selected_page == "Patient Risk Prediction":
+elif selected_page == "New Prediction":
     render_prediction()
 
 st.divider()
