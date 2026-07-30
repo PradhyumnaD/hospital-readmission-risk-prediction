@@ -6,7 +6,7 @@
 [![Application](https://img.shields.io/badge/Application-Streamlit-ff4b4b)](#streamlit-application)
 [![Explainability](https://img.shields.io/badge/Explainability-SHAP-purple)](#model-explainability)
 
-A complete machine-learning capstone project for estimating the probability of **30-day hospital readmission** among patients with diabetes. The project covers data auditing, leakage-safe patient-level splitting, preprocessing, baseline and advanced model comparison, hyperparameter tuning, threshold analysis, final untouched test-set evaluation, explainable AI, and a CSV-based Streamlit prediction application.
+A complete machine-learning capstone project for estimating the probability of **30-day hospital readmission** among patients with diabetes. The project covers data auditing, leakage-safe patient-level splitting, preprocessing, baseline and advanced model comparison, hyperparameter tuning, threshold analysis, final untouched test-set evaluation, explainable AI, and a professional Streamlit application with guided single-record entry, batch CSV prediction, synthetic demonstration data, and record-level explanations.
 
 > **Important:** This repository is an academic decision-support prototype. It is not a medical device, does not provide a diagnosis, and must not be used as the sole basis for patient-care decisions.
 
@@ -29,18 +29,18 @@ A complete machine-learning capstone project for estimating the probability of *
 13. [Threshold Strategy](#threshold-strategy)
 14. [Model Explainability](#model-explainability)
 15. [Streamlit Application](#streamlit-application)
-16. [CSV Prediction Workflow](#csv-prediction-workflow)
+16. [Prediction Workflows](#prediction-workflows)
 17. [Installation and Local Execution](#installation-and-local-execution)
 18. [Online Deployment](#online-deployment)
-19. [Project Structure](#project-structure)
-20. [Notebook-by-Notebook Summary](#notebook-by-notebook-summary)
-21. [Important Artifacts](#important-artifacts)
-22. [Reproducibility and Validation](#reproducibility-and-validation)
-23. [Limitations](#limitations)
-24. [Responsible Use](#responsible-use)
-25. [Future Enhancements](#future-enhancements)
-
----
+19. [Regenerating Deployment Assets](#regenerating-deployment-assets)
+20. [Project Structure](#project-structure)
+21. [Notebook-by-Notebook Summary](#notebook-by-notebook-summary)
+22. [Important Artifacts](#important-artifacts)
+23. [Reproducibility and Validation](#reproducibility-and-validation)
+24. [Limitations](#limitations)
+25. [Responsible Use](#responsible-use)
+26. [Future Enhancements](#future-enhancements)
+27. [Final Conclusion](#final-conclusion)
 
 ## Project Overview
 
@@ -49,16 +49,15 @@ A complete machine-learning capstone project for estimating the probability of *
 **Prediction point:** At or near hospital discharge  
 **Prediction target:** Readmission within 30 days  
 **Final model:** Tuned XGBoost  
-**Application:** Streamlit dashboard with CSV-based single-record and batch prediction  
-**Explainability:** Global and example patient-level SHAP analysis  
+**Application:** Seven-page Streamlit dashboard with guided direct entry, batch CSV upload, and synthetic sample workflows  
+**Explainability:** Global grouped SHAP analysis and dynamic record-level prediction explanations  
+**Deployed application:** [Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
 The project was designed to answer the following question:
 
 > Can routinely available hospital encounter information be used to identify encounters that may require additional post-discharge review because of an elevated model-estimated probability of readmission within 30 days?
 
 The project does not optimize for accuracy alone. Because only about 11% of encounters belong to the positive class, the analysis emphasizes recall, precision, F1-score, balanced accuracy, ROC-AUC, PR-AUC, confusion-matrix counts, and the operational cost of false-positive and false-negative decisions.
-
----
 
 ## Project Status
 
@@ -75,11 +74,14 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
 | Final model and threshold selection | Completed |
 | Untouched test-set evaluation | Completed |
 | Explainable AI analysis | Completed |
-| Streamlit dashboard | Completed |
-| CSV prediction workflow | Completed |
+| Seven-page Streamlit dashboard | Completed |
+| Guided five-step patient-entry form | Completed |
+| Batch CSV workflow | Completed |
+| Synthetic sample workflow | Completed |
+| Dynamic record-level explanations | Completed |
+| Comprehensive application validation | Completed — 88 of 88 checks passed |
+| Streamlit Community Cloud deployment | Completed |
 | GitHub repository | Completed |
-
----
 
 ## Key Results
 
@@ -102,8 +104,19 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
   - caught **198 additional readmissions**
   - reduced false negatives by **198**
   - produced **1,624 additional false-positive alerts**
-
----
+- Streamlit interface:
+  - **7 pages**
+  - **3 input methods**
+  - **5-step guided form**
+  - dynamic record-level explanations
+  - downloadable screening and factor files
+- Notebook 09 application validation:
+  - **88 checks**
+  - **88 passed**
+  - **0 failed**
+  - **100.00% pass rate**
+  - **22 approved figures found**
+  - **18 invalid-input tests passed**
 
 ## Business Problem
 
@@ -223,7 +236,9 @@ One-time untouched test evaluation
    ↓
 SHAP explainability
    ↓
-Streamlit deployment
+Guided and CSV Streamlit prediction workflows
+   ↓
+Comprehensive application validation and deployment
 ```
 
 ### Evaluation priorities
@@ -585,32 +600,52 @@ The final application is implemented in:
 app.py
 ```
 
+Supporting interface modules are stored in:
+
+```text
+ui/form_config.py
+ui/components.py
+ui/styles.py
+.streamlit/config.toml
+```
+
+The public deployment is available at:
+
+[https://hospital-readmission-risk-prediction.streamlit.app/](https://hospital-readmission-risk-prediction.streamlit.app/)
+
 ### Application pages
 
-- Project Overview
-- Dataset Summary
-- Model Development
-- Final Evaluation
-- Saved Figures
-- Model Explainability
-- Patient Risk Prediction
+The final sidebar contains seven pages:
+
+1. **Overview**
+2. **Data Explorer**
+3. **Model Development**
+4. **Model Performance**
+5. **Saved Figures**
+6. **Risk Insights**
+7. **New Prediction**
 
 ### Main application features
 
-- Clickable sidebar navigation
-- Cleaned-dataset summary
+- Professional light interface with a navy sidebar
+- Responsive page heroes, metric cards, information cards, and threshold cards
+- Cleaned-dataset summary and target-class visualization
 - Development-stage model comparison
 - Final untouched test-set results
-- Threshold interpretation
+- Threshold trade-off interpretation
 - Saved model-development, final-evaluation, and explainability figures
-- Global SHAP-importance table
-- Blank 43-column CSV template download
-- Valid sample CSV download
-- Single-record CSV prediction
-- Batch CSV prediction
-- Detailed input validation
-- Downloadable prediction results
-- Academic and clinical-use disclaimer
+- Global grouped SHAP driver table and chart
+- Guided five-step single-record form
+- Batch CSV upload
+- Synthetic sample-record workflow
+- Standard review cutoff at 0.50
+- Additional screening cutoff at 0.45
+- Probability scale with both cutoffs and the current prediction marker
+- Dynamic top-five increasing and top-five reducing factors
+- Downloadable screening results
+- Downloadable prediction-factor results
+- De-identification guidance
+- Academic decision-support disclaimer
 
 ### Approved visualizations
 
@@ -623,96 +658,113 @@ The application includes approved figures from:
 - Final evaluation
 - Model explainability
 
-The validated application loaded **22 approved figures with no missing files**.
+Notebook 09 confirmed that the application defines **22 approved figures** and that **all 22 files are present**.
 
----
+## Prediction Workflows
 
-## CSV Prediction Workflow
+The **New Prediction** page provides three ways to submit the same finalized 43 predictors. Every method uses the same saved preprocessor, Tuned XGBoost model, probability calculation, thresholds, and explanation logic.
 
-A manual 43-field form was intentionally avoided because entering 43 predictors one by one is not practical.
+### Input method 1: Enter One Patient
 
-The application instead uses a CSV workflow.
+The guided form collects all 43 predictors in five steps:
 
-### Input files
+1. **Patient Profile**
+2. **Hospital Encounter**
+3. **Healthcare Use**
+4. **Diabetes Management**
+5. **Review**
+
+The user reviews all values before selecting **Calculate Readmission Risk**.
+
+The result includes:
+
+- Estimated 30-day readmission risk
+- Standard Review Result using the 0.50 cutoff
+- Additional Screening Result using the 0.45 cutoff
+- Five factors increasing the estimated risk
+- Five factors reducing the estimated risk
+- Downloadable screening result
+- Downloadable prediction factors
+
+### Input method 2: Upload Multiple Records
+
+The application accepts a CSV containing one or more hospital encounter rows.
+
+Input files:
 
 ```text
 outputs/patient_input_template.csv
 outputs/sample_patient_input.csv
 ```
 
-- `patient_input_template.csv` contains the 43 required column headers and no patient rows.
-- `sample_patient_input.csv` contains three synthetic demonstration rows, including different utilization profiles for batch-prediction testing.
-- The sample file is not a real patient and is not drawn from the final test set.
+- `patient_input_template.csv` contains the 43 required headers and no completed record.
+- `sample_patient_input.csv` contains a synthetic demonstration record.
+- The sample is not a real patient and is not drawn from the final test set.
 
-### Prediction steps
-
-1. Start the Streamlit application.
-2. Open **Patient Risk Prediction**.
-3. Download the blank template or sample file.
-4. Prepare one or more encounter rows.
-5. Upload the CSV.
-6. Review the preview.
-7. Select **Generate Readmission Predictions**.
-8. Review probability and threshold classifications.
-9. Download the prediction results.
-
-### Required input structure
-
-The CSV must contain all 43 modeling predictors in the required schema. It must not contain:
+The CSV must contain all 43 model predictors and must not contain:
 
 - `encounter_id`
 - `patient_nbr`
 - `readmitted_30`
 
-### Validation checks
+The prediction service checks:
 
-The prediction service checks for:
-
+- non-DataFrame or unreadable input
 - empty files
-- invalid CSV formatting
 - duplicate columns
 - missing required columns
 - unexpected columns
-- missing numeric values
-- invalid numeric values
+- surrounding spaces in column names
+- shuffled column order
+- missing or invalid numeric values
 - numeric values outside validated ranges
-- missing categorical values
-- incorrect transformed feature count
+- missing or blank categorical values
+- transformed feature count
 
-### Output columns
+### Input method 3: Use Sample Record
 
-The downloaded prediction file contains:
+The synthetic sample can be loaded directly into the guided form. This allows the complete direct-entry workflow to be demonstrated without entering real patient information.
 
-- Record Number
-- Readmission Probability
-- Readmission Probability (%)
-- Main Threshold
-- Main Classification
-- Recall-Focused Threshold
-- Recall-Focused Classification
-- All 43 original input columns
+### User-facing screening wording
 
-The complete downloaded file therefore contains **50 columns**.
-
-### Classification wording
-
-At threshold 0.50:
+Standard review at 0.50:
 
 ```text
-Flagged at Main Threshold
-Not Flagged at Main Threshold
+Review Recommended
+Standard Review Not Triggered
 ```
 
-At threshold 0.45:
+Additional screening at 0.45:
 
 ```text
-Flagged for Screening
-Not Flagged
+Additional Screening Recommended
+No Additional Screening Flag
 ```
 
-This wording is used instead of absolute “high-risk” or “low-risk” labels because the classifications depend on the selected operating threshold and are not clinical diagnoses.
+A record can trigger additional screening at 0.45 without triggering standard review at 0.50. This is expected because the thresholds represent different operating priorities.
 
----
+### Downloadable outputs
+
+**Single-patient screening result**
+
+- 1 row
+- 48 columns
+- 5 screening-result columns
+- all 43 entered predictors
+
+**Batch screening results**
+
+- one row per uploaded record
+- 6 user-facing result columns
+
+**Prediction-factor results**
+
+- 10 rows per explained record
+- 5 increasing factors
+- 5 reducing factors
+- 7 output columns
+
+Notebook 09 verified that the direct-entry and CSV workflows return identical probabilities, threshold decisions, and explanation-factor rankings for identical input values.
 
 ## Installation and Local Execution
 
@@ -766,6 +818,7 @@ Core technologies include:
 - joblib
 - SHAP
 - Matplotlib
+- Altair
 - Streamlit
 
 ### 4. Validate the application files
@@ -774,6 +827,9 @@ Core technologies include:
 python -m py_compile app.py
 python -m py_compile prediction_service.py
 python -m py_compile custom_transformers.py
+python -m py_compile ui/form_config.py
+python -m py_compile ui/components.py
+python -m py_compile ui/styles.py
 ```
 
 Successful syntax checks return no output.
@@ -790,28 +846,50 @@ The local application normally opens at:
 http://localhost:8501
 ```
 
-### 6. Test the prediction workflow
+### 6. Test the three prediction workflows
 
-Upload:
+Open **New Prediction** and test:
+
+1. **Enter One Patient**
+2. **Upload Multiple Records**
+3. **Use Sample Record**
+
+For the validated synthetic sample, the estimated probability is approximately:
 
 ```text
-outputs/sample_patient_input.csv
+46.39%
 ```
 
-The application should load:
+Expected threshold results:
 
 ```text
-3 records
-43 predictor columns
+Standard Review Not Triggered
+Additional Screening Recommended
 ```
 
-Generate predictions and confirm that all three records receive a probability, a main-threshold classification, and a recall-focused classification.
+### 7. Review formal validation evidence
 
----
+Open and run:
+
+```text
+notebooks/09_streamlit_application_validation.ipynb
+```
+
+The completed notebook reports:
+
+```text
+88 checks passed
+0 checks failed
+100.00% pass rate
+```
 
 ## Online Deployment
 
-The application is designed for deployment through Streamlit Community Cloud.
+The application is deployed through Streamlit Community Cloud.
+
+### Public application
+
+[Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
 ### Deployment coordinates
 
@@ -825,11 +903,12 @@ Entrypoint: app.py
 
 Before deployment:
 
-1. Confirm that `requirements.txt` contains the versions used by the local project environment.
+1. Confirm that `requirements.txt` contains compatible package versions.
 2. Confirm that the final model and preprocessor are committed and available through Git or Git LFS.
-3. Confirm that all CSV, JSON, metric, and figure files used by `app.py` are present in the repository.
-4. Run the syntax checks documented above.
-5. Push the final repository to GitHub.
+3. Confirm that the application assets, CSV files, JSON files, metrics, and figures are present.
+4. Run the Python syntax checks.
+5. Run Notebook 09 and confirm 88 of 88 checks pass.
+6. Push the final repository to GitHub.
 
 ### Community Cloud setup
 
@@ -837,27 +916,27 @@ Before deployment:
 2. Create a new app from the existing repository.
 3. Select branch `main`.
 4. Set the entrypoint to `app.py`.
-5. Select the Python version that matches the local environment.
+5. Select the Python version compatible with the serialized model environment.
 6. Deploy and monitor the build logs.
-7. Validate every dashboard page and run the three-record sample CSV.
+7. Validate all seven pages and all three input methods.
 
 The application does not require secrets or external credentials.
 
-After deployment, add the public application address to this README using a Streamlit badge.
+### Updating the deployed application
 
-A complete operational checklist is available in:
+For normal code, documentation, figure, model, or artifact updates:
 
 ```text
-STREAMLIT_CLOUD_DEPLOYMENT_CHECKLIST.md
+Edit locally → test locally → commit → push
 ```
+
+Streamlit Community Cloud rebuilds the app from the connected GitHub branch. Dependency changes in `requirements.txt` trigger a fuller rebuild. A manual reboot can be used when a deployment appears stale.
 
 The application walkthrough is available in:
 
 ```text
 STREAMLIT_APP_USER_GUIDE.md
 ```
-
----
 
 ## Regenerating Deployment Assets
 
@@ -897,10 +976,18 @@ hospital-readmission-project/
 ├── create_sample_input_csv.py
 ├── README.md
 ├── STREAMLIT_APP_USER_GUIDE.md
-├── STREAMLIT_CLOUD_DEPLOYMENT_CHECKLIST.md
 ├── requirements.txt
 ├── .gitignore
 ├── .gitattributes
+│
+├── .streamlit/
+│   └── config.toml
+│
+├── ui/
+│   ├── __init__.py
+│   ├── form_config.py
+│   ├── components.py
+│   └── styles.py
 │
 ├── data/
 │   ├── raw/
@@ -918,7 +1005,8 @@ hospital-readmission-project/
 │   ├── 06_model_tuning_threshold_selection.ipynb
 │   ├── 06.2_advanced_modeling.ipynb
 │   ├── 07_final_test_evaluation.ipynb
-│   └── 08_model_explainability.ipynb
+│   ├── 08_model_explainability.ipynb
+│   └── 09_streamlit_application_validation.ipynb
 │
 ├── models/
 │   ├── final_preprocessor.joblib
@@ -929,10 +1017,20 @@ hospital-readmission-project/
 │   ├── preprocessing_metadata.json
 │   ├── final_deployment_config.json
 │   ├── streamlit_input_schema.json
-│   └── notebook-specific metadata files
+│   ├── notebook_7_final_test_evaluation_summary.json
+│   └── notebook_9_streamlit_validation_summary.json
 │
 ├── outputs/
 │   ├── metrics/
+│   │   ├── notebook_7_final_threshold_comparison_table.csv
+│   │   ├── notebook_8_grouped_original_shap_importance.csv
+│   │   ├── notebook_9_streamlit_validation_checks.csv
+│   │   ├── notebook_9_streamlit_validation_step_summary.csv
+│   │   ├── notebook_9_streamlit_validation_overall_summary.csv
+│   │   ├── notebook_9_direct_csv_parity_results.csv
+│   │   ├── notebook_9_invalid_input_test_results.csv
+│   │   ├── notebook_9_download_validation_results.csv
+│   │   └── notebook_9_approved_figure_validation.csv
 │   ├── figures/
 │   ├── patient_input_template.csv
 │   └── sample_patient_input.csv
@@ -941,8 +1039,6 @@ hospital-readmission-project/
     ├── eda/
     └── modeling/
 ```
-
----
 
 ## Notebook-by-Notebook Summary
 
@@ -1227,6 +1323,55 @@ Discharge disposition, medical specialty, diagnosis groups, age, and previous in
 
 ---
 
+<details>
+<summary><strong>Notebook 9 — Streamlit Application Validation</strong></summary>
+
+### Objective
+
+Validate the finalized Streamlit application without retraining the model or changing preprocessing or thresholds.
+
+### Validation areas
+
+1. Deployment assets
+2. Guided-form configuration
+3. Direct-entry and CSV prediction parity
+4. Invalid-input handling
+5. Downloadable outputs
+6. Application structure and saved assets
+
+### Final validation result
+
+```text
+Validation steps completed: 6
+Total validation checks: 88
+Passed validation checks: 88
+Failed validation checks: 0
+Overall pass rate: 100.00%
+Application pages: 7
+Prediction input methods: 3
+Approved figures: 22
+Invalid-input tests: 18
+```
+
+### Main outputs
+
+```text
+artifacts/notebook_9_streamlit_validation_summary.json
+outputs/metrics/notebook_9_streamlit_validation_checks.csv
+outputs/metrics/notebook_9_streamlit_validation_step_summary.csv
+outputs/metrics/notebook_9_streamlit_validation_overall_summary.csv
+outputs/metrics/notebook_9_direct_csv_parity_results.csv
+outputs/metrics/notebook_9_invalid_input_test_results.csv
+outputs/metrics/notebook_9_download_validation_results.csv
+outputs/metrics/notebook_9_approved_figure_validation.csv
+```
+
+### Main conclusion
+
+The finalized application passed all structural, prediction, explanation, input-validation, download, theme, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values.
+
+</details>
+
 ## Important Artifacts
 
 ### Final deployment
@@ -1254,6 +1399,16 @@ outputs/metrics/notebook_8_grouped_original_feature_importance.csv
 outputs/figures/notebook_8_top_15_grouped_original_shap_importance.png
 ```
 
+### Application interface
+
+```text
+app.py
+.streamlit/config.toml
+ui/form_config.py
+ui/components.py
+ui/styles.py
+```
+
 ### Application inputs
 
 ```text
@@ -1261,7 +1416,19 @@ outputs/patient_input_template.csv
 outputs/sample_patient_input.csv
 ```
 
----
+### Application validation
+
+```text
+notebooks/09_streamlit_application_validation.ipynb
+artifacts/notebook_9_streamlit_validation_summary.json
+outputs/metrics/notebook_9_streamlit_validation_checks.csv
+outputs/metrics/notebook_9_streamlit_validation_step_summary.csv
+outputs/metrics/notebook_9_streamlit_validation_overall_summary.csv
+outputs/metrics/notebook_9_direct_csv_parity_results.csv
+outputs/metrics/notebook_9_invalid_input_test_results.csv
+outputs/metrics/notebook_9_download_validation_results.csv
+outputs/metrics/notebook_9_approved_figure_validation.csv
+```
 
 ## Reproducibility and Validation
 
@@ -1275,8 +1442,12 @@ The project follows these safeguards:
 6. Saved feature schema and exact feature order.
 7. Saved preprocessor and final model.
 8. Deployment checks for 43 raw and 179 transformed features.
-9. CSV validation before prediction.
-10. Reproducible sample prediction.
+9. Validation before direct-entry or CSV prediction.
+10. Dynamic explanation reconstruction checks.
+11. Direct-entry and CSV parity testing.
+12. Download export-and-reload testing.
+13. Static application structure and syntax testing.
+14. Saved evidence from Notebook 09.
 
 ### Deployment validation
 
@@ -1290,33 +1461,81 @@ Transformed input features: 179
 predict_proba available: True
 ```
 
-### Sample prediction validation
+### Guided-form validation
 
-Using `outputs/sample_patient_input.csv`:
+Notebook 09 confirmed:
 
 ```text
-Records: 3
-Required predictor columns: 43
-Prediction outputs per record: probability plus two threshold classifications
+4 data-entry sections
+43 configured predictors
+43 unique predictors
+0 missing predictors
+0 unexpected predictors
+0 duplicate predictors
+All defaults, ranges, options, and labels valid
 ```
 
-The first record preserves the original validated demonstration profile. Two additional synthetic records were added to demonstrate batch prediction. The sample contains no real patient information and is not drawn from the final test set.
+The guided workflow adds a fifth **Review** step before prediction.
 
----
+### Prediction parity validation
+
+For the synthetic sample:
+
+```text
+Direct-entry probability: 46.38500810%
+CSV probability:          46.38500810%
+Difference:               0.000000000000
+```
+
+The threshold classifications and top-five increasing and reducing factors also matched.
+
+### Invalid-input validation
+
+Notebook 09 ran 18 tests:
+
+```text
+Accepted valid-input tests: 4
+Rejected invalid-input tests: 14
+Failed tests: 0
+```
+
+### Download validation
+
+The validated outputs were:
+
+```text
+Single-patient screening result: 1 row × 48 columns
+Batch screening results:        1 row × 6 columns
+Prediction-factor results:     10 rows × 7 columns
+```
+
+All CSV payloads were exported and reloaded successfully.
+
+### Final application-validation result
+
+```text
+Validation steps: 6
+Total checks: 88
+Passed: 88
+Failed: 0
+Pass rate: 100.00%
+Pages validated: 7
+Input methods validated: 3
+Approved figures validated: 22
+```
 
 ## Limitations
 
 - The source data covers hospital encounters from 1999–2008 and may not represent current clinical practice.
-- The model uses structured encounter data and does not include free-text notes, imaging, laboratory trends, social determinants, or post-discharge information.
-- Predictive performance is moderate; the model should be viewed as a screening prototype rather than a definitive clinical system.
-- The positive class is imbalanced, leading to low precision and many false-positive alerts at recall-focused thresholds.
+- The model uses structured encounter data and does not include free-text notes, imaging, longitudinal laboratory trends, social determinants, or post-discharge information.
+- Predictive performance is moderate; the system should be viewed as a screening prototype rather than a definitive clinical tool.
+- The positive class is imbalanced, producing low precision and many false-positive alerts at the recall-focused cutoff.
 - Some predictors may reflect hospital workflows or documentation patterns rather than direct clinical risk.
-- The dataset includes demographic variables, so fairness and subgroup performance should be reviewed before any real-world use.
-- Global SHAP importance does not establish causality.
-- The current application explains global drivers and saved examples; it does not yet generate a new local SHAP explanation for every uploaded record.
-- The CSV workflow assumes that all 43 required predictors are available and correctly mapped.
-
----
+- The dataset includes demographic variables, so fairness and subgroup performance should be reviewed before real-world use.
+- Global and record-level SHAP-style contributions describe model behavior and do not establish causality.
+- The direct-entry workflow requires all 43 predictors; no reduced-input clinical model was trained.
+- The application does not connect to an electronic health record, store patient histories, authenticate users, or create clinical care plans.
+- Notebook 09 validates software behavior and internal consistency; it does not replace external clinical validation, calibration review, security assessment, or regulatory evaluation.
 
 ## Responsible Use
 
@@ -1345,20 +1564,18 @@ Any future clinical use would require external validation, calibration assessmen
 
 Potential next steps include:
 
-1. Add local SHAP explanations for newly uploaded patient records.
-2. Add probability calibration and calibration plots.
-3. Evaluate subgroup performance and fairness.
-4. Validate on a newer external dataset.
-5. Add hospital-specific recalibration.
+1. Add probability calibration and calibration plots.
+2. Evaluate subgroup performance and fairness.
+3. Validate on a newer external dataset.
+4. Add hospital-specific recalibration.
+5. Train and compare a smaller-input model for faster manual entry.
 6. Integrate secure electronic health record data ingestion.
-7. Add role-based access, logging, and audit trails.
-8. Add drift monitoring and periodic revalidation.
-9. Add a smaller-input model trained specifically for manual clinical entry.
-10. Compare cost-sensitive learning using explicit operational cost assumptions.
-11. Add unit tests and automated continuous-integration checks.
-12. Deploy the Streamlit application to a managed environment.
-
----
+7. Add role-based access, authentication, logging, and audit trails.
+8. Add drift monitoring and scheduled revalidation.
+9. Compare cost-sensitive learning using explicit operational cost assumptions.
+10. Add automated unit tests and continuous-integration workflows based on Notebook 09 checks.
+11. Add secure report generation and authorized patient-record persistence.
+12. Evaluate alternative deployment environments for controlled organizational use.
 
 ## Final Conclusion
 
@@ -1373,7 +1590,12 @@ This capstone demonstrates a complete, leakage-aware machine-learning lifecycle:
 - hyperparameter tuning
 - threshold-based decision analysis
 - one-time untouched test evaluation
-- SHAP explainability
-- CSV-based Streamlit deployment
+- global and record-level explainability
+- guided single-record prediction
+- batch CSV prediction
+- professional seven-page Streamlit deployment
+- comprehensive application validation
 
-The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, and deploy the result transparently as an academic decision-support prototype.
+The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, provide consistent predictions across input methods, and validate the complete application through 88 successful checks.
+
+The deployed system remains an academic decision-support prototype and must not be interpreted as a medical diagnosis or used as the sole basis for patient-care decisions.

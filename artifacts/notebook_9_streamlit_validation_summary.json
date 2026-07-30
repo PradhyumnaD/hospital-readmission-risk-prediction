@@ -1,0 +1,88 @@
+{
+  "notebook": "09_streamlit_application_validation.ipynb",
+  "validation_status": "PASSED",
+  "validation_timestamp": "2026-07-30T13:16:37-05:00",
+  "final_model": "XGBClassifier",
+  "prediction_target": "readmitted_30",
+  "positive_class": 1,
+  "raw_predictors": 43,
+  "numeric_predictors": 8,
+  "categorical_predictors": 35,
+  "transformed_features": 179,
+  "standard_review_cutoff": 0.5,
+  "additional_screening_cutoff": 0.45,
+  "application_pages": 7,
+  "prediction_input_methods": 3,
+  "approved_figures": 22,
+  "invalid_input_tests": 18,
+  "validation_steps": 6,
+  "total_checks": 88,
+  "passed_checks": 88,
+  "failed_checks": 0,
+  "overall_pass_rate_percentage": 100.0,
+  "step_summary": [
+    {
+      "Step Number": 1,
+      "Validation Area": "Deployment Assets",
+      "Total Checks": 12,
+      "Passed Checks": 12,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    },
+    {
+      "Step Number": 2,
+      "Validation Area": "Guided Form Configuration",
+      "Total Checks": 18,
+      "Passed Checks": 18,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    },
+    {
+      "Step Number": 3,
+      "Validation Area": "Prediction Parity",
+      "Total Checks": 7,
+      "Passed Checks": 7,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    },
+    {
+      "Step Number": 4,
+      "Validation Area": "Invalid-Input Handling",
+      "Total Checks": 18,
+      "Passed Checks": 18,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    },
+    {
+      "Step Number": 5,
+      "Validation Area": "Downloadable Outputs",
+      "Total Checks": 23,
+      "Passed Checks": 23,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    },
+    {
+      "Step Number": 6,
+      "Validation Area": "Application Structure",
+      "Total Checks": 10,
+      "Passed Checks": 10,
+      "Failed Checks": 0,
+      "Pass Rate (%)": 100.0,
+      "Result": "PASSED"
+    }
+  ],
+  "saved_outputs": {
+    "all_validation_checks": "outputs\\metrics\\notebook_9_streamlit_validation_checks.csv",
+    "step_summary": "outputs\\metrics\\notebook_9_streamlit_validation_step_summary.csv",
+    "overall_summary": "outputs\\metrics\\notebook_9_streamlit_validation_overall_summary.csv",
+    "prediction_parity": "outputs\\metrics\\notebook_9_direct_csv_parity_results.csv",
+    "invalid_input_results": "outputs\\metrics\\notebook_9_invalid_input_test_results.csv",
+    "download_validation": "outputs\\metrics\\notebook_9_download_validation_results.csv",
+    "figure_validation": "outputs\\metrics\\notebook_9_approved_figure_validation.csv"
+  }
+}

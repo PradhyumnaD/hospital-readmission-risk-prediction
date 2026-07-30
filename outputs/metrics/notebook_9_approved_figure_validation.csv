@@ -1,0 +1,23 @@
+Figure Label,Category,Filename,File Exists,Result
+Overall Model Comparison Summary,Overall Comparison,dynamic_all_model_comparison_summary.png,True,PASSED
+Dummy Baseline Confusion Matrix,Baseline Models,dummy_baseline_confusion_matrix.png,True,PASSED
+Baseline Metric Comparison,Baseline Models,notebook_4_baseline_metric_comparison.png,True,PASSED
+Baseline Precision-Recall Curves,Baseline Models,notebook_4_baseline_precision_recall_curves.png,True,PASSED
+Baseline ROC Curves,Baseline Models,notebook_4_baseline_roc_curves.png,True,PASSED
+Candidate Model Metric Comparison,Candidate Models,notebook_5_candidate_metric_comparison.png,True,PASSED
+Candidate Precision-Recall Curves,Candidate Models,notebook_5_candidate_precision_recall_curves.png,True,PASSED
+Candidate ROC Curves,Candidate Models,notebook_5_candidate_roc_curves.png,True,PASSED
+Threshold Balanced Accuracy,Threshold Analysis,notebook_6_threshold_balanced_accuracy.png,True,PASSED
+False Positive and False Negative Trade-off,Threshold Analysis,notebook_6_threshold_false_positive_false_negative_tradeoff.png,True,PASSED
+"Recall, Precision and F1 Trade-off",Threshold Analysis,notebook_6_threshold_recall_precision_f1.png,True,PASSED
+Final Confusion Matrix — Threshold 0.50,Final Evaluation,notebook_7_final_confusion_matrix_threshold_050.png,True,PASSED
+Final Confusion Matrix — Threshold 0.45,Final Evaluation,notebook_7_final_confusion_matrix_threshold_045.png,True,PASSED
+Final Threshold Comparison,Final Evaluation,notebook_7_final_threshold_comparison_table.png,True,PASSED
+Final Precision-Recall Curve,Final Evaluation,notebook_7_final_xgboost_precision_recall_curve.png,True,PASSED
+Final ROC Curve,Final Evaluation,notebook_7_final_xgboost_roc_curve.png,True,PASSED
+Grouped Original Feature Importance,Model Explainability,notebook_8_top_15_grouped_original_feature_importance.png,True,PASSED
+Grouped Original SHAP Importance,Model Explainability,notebook_8_top_15_grouped_original_shap_importance.png,True,PASSED
+Transformed Feature Importance,Model Explainability,notebook_8_top_20_xgboost_feature_importance.png,True,PASSED
+Transformed SHAP Importance,Model Explainability,notebook_8_top_20_xgboost_shap_transformed_importance.png,True,PASSED
+High-Risk Patient SHAP Example,Model Explainability,notebook_8_selected_high_risk_patient_shap_explanation.png,True,PASSED
+True-Positive Patient SHAP Example,Model Explainability,notebook_8_true_positive_patient_shap_explanation.png,True,PASSED

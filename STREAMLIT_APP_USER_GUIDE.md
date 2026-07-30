@@ -2,157 +2,370 @@
 
 ## Hospital Readmission Risk Prediction
 
-This guide explains how to review the completed capstone dashboard and run the CSV-based prediction workflow.
+This guide explains how to use the finalized seven-page capstone dashboard, enter one encounter through the guided form, upload multiple CSV records, load a synthetic sample, interpret both screening cutoffs, review record-level explanations, and download results.
 
-> **Academic-use notice:** This application is a decision-support prototype. It does not provide a medical diagnosis and must not be used as the sole basis for patient-care decisions. Use only synthetic or properly de-identified records.
-
----
+> **Academic-use notice:** This application is a decision-support prototype. It does not provide a medical diagnosis and must not be used as the sole basis for patient-care decisions. Use only synthetic or appropriately de-identified records.
 
 ## 1. Open the Application
 
-Open the deployed Streamlit link in a web browser.
+Public deployment:
 
-The left sidebar contains the main navigation:
+[Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
-- **Project Overview**
-- **Dataset Summary**
-- **Model Development**
-- **Final Evaluation**
-- **Saved Figures**
-- **Model Explainability**
-- **Patient Risk Prediction**
+The left sidebar contains seven pages:
 
----
+1. **Overview**
+2. **Data Explorer**
+3. **Model Development**
+4. **Model Performance**
+5. **Saved Figures**
+6. **Risk Insights**
+7. **New Prediction**
 
-## 2. Review the Project
+## 2. Review the Dashboard Pages
 
-### Project Overview
+### Overview
 
-Shows the completed workflow, final model, and the two operating thresholds:
+Provides the project summary and key validated facts:
 
-- Main threshold: **0.50**
-- Recall-focused threshold: **0.45**
+- 99,343 historical encounters
+- 69,990 unique patients
+- 11.39% 30-day readmission rate
+- 43 raw predictors
+- Tuned XGBoost final model
+- standard review cutoff: 0.50
+- additional screening cutoff: 0.45
 
-### Dataset Summary
+### Data Explorer
 
 Shows:
 
-- 99,343 hospital encounters
-- 69,990 unique patients
-- 43 modeling predictors
-- 11.39% 30-day readmission rate
+- target-class distribution
+- 88,029 encounters not readmitted within 30 days
+- 11,314 encounters readmitted within 30 days
+- patient-level grouping and identifier handling
+- cleaned modeling-table summary
+
+`encounter_id` is used only for tracking. `patient_nbr` is used only for patient-level grouping. Neither identifier is a model input.
 
 ### Model Development
 
-Displays development and validation results used to compare baseline, candidate, tuned, and threshold configurations.
+Displays baseline, candidate, tuned, and threshold-analysis configurations evaluated before the final untouched test assessment.
 
-### Final Evaluation
+Use this page to compare:
 
-Displays the one-time untouched test-set results for the finalized Tuned XGBoost model.
+- accuracy
+- balanced accuracy
+- precision
+- recall
+- specificity
+- F1-score
+- ROC-AUC
+- PR-AUC
+- confusion-matrix counts
+
+### Model Performance
+
+Shows the final Tuned XGBoost results on 14,976 untouched test encounters.
+
+At 0.50:
+
+- recall: 55.54%
+- specificity: 66.63%
+- readmissions caught: 943
+- readmissions missed: 755
+- false positives: 4,431
+
+At 0.45:
+
+- recall: 67.20%
+- specificity: 54.40%
+- readmissions caught: 1,141
+- readmissions missed: 557
+- false positives: 6,055
+
+Lowering the cutoff caught 198 additional readmissions and generated 1,624 additional false-positive alerts.
 
 ### Saved Figures
 
-Use the two dropdown menus to select an analysis stage and a saved visualization.
+Select an analysis stage and figure from the dropdown menus. The validated application contains 22 approved figures and no missing files.
 
-### Model Explainability
+### Risk Insights
 
-Shows the strongest global model drivers based on grouped SHAP importance. Global importance describes overall model behavior and does not explain a newly uploaded record by itself.
+Shows the strongest global grouped SHAP drivers.
 
----
+Global importance summarizes model behavior across many encounters. It does not prove that a feature medically caused readmission and does not replace the explanation of an individual record.
 
-## 3. Run a Prediction
+### New Prediction
 
-1. Select **Patient Risk Prediction** from the sidebar.
-2. Download either:
-   - **Blank CSV Template** for preparing new records, or
-   - **Sample Test CSV** for demonstration.
-3. Upload the completed CSV.
-4. Confirm that the application reports the expected number of rows and **43 columns**.
-5. Review the uploaded-data preview.
-6. Select **Generate Readmission Predictions**.
-7. Review the probability and threshold classifications.
-8. Select **Download Prediction Results** to save the output.
+Provides three input methods:
 
-The application supports one record or multiple records in the same CSV.
+- **Enter One Patient**
+- **Upload Multiple Records**
+- **Use Sample Record**
 
----
+Every method uses the same 43 predictors, finalized preprocessor, Tuned XGBoost model, thresholds, and explanation logic.
 
-## 4. Interpret the Results
+## 3. Enter One Patient
 
-### Readmission Probability
+Select:
 
-The probability is the model-estimated likelihood of readmission within 30 days.
+```text
+New Prediction → Enter One Patient
+```
 
-### Main Threshold: 0.50
+Complete the five-step workflow.
 
-- **Flagged at Main Threshold:** Probability is at least 0.50.
-- **Not Flagged at Main Threshold:** Probability is below 0.50.
+### Step 1 — Patient Profile
 
-This is the main balanced operating point.
+Enter:
 
-### Recall-Focused Threshold: 0.45
+- Race / Ethnicity
+- Gender
+- Age Group
 
-- **Flagged for Screening:** Probability is at least 0.45.
-- **Not Flagged:** Probability is below 0.45.
+### Step 2 — Hospital Encounter
 
-This threshold identifies more possible readmissions but also produces more false-positive alerts.
+Enter admission, discharge, specialty, utilization during the encounter, and diagnosis-group information.
 
-A record can be below the 0.50 threshold and still be flagged at 0.45. This is expected because the thresholds represent different operating priorities.
+### Step 3 — Healthcare Use
 
----
+Enter previous:
 
-## 5. Downloaded Prediction File
+- outpatient visits
+- emergency visits
+- inpatient visits
 
-The downloaded output contains:
+### Step 4 — Diabetes Management
 
-- Record number
-- Readmission probability
-- Readmission probability percentage
-- Main threshold
-- Main classification
-- Recall-focused threshold
-- Recall-focused classification
-- All 43 original input fields
+Enter:
 
----
+- glucose and A1C testing categories
+- medication-change status
+- diabetes-medication status
+- insulin status
+- individual diabetes-medication fields
 
-## 6. Suggested Demonstration Sequence
+### Step 5 — Review
 
-A short demonstration can follow this order:
+Review all 43 values before selecting:
 
-1. Open **Project Overview** and identify the final model.
-2. Open **Final Evaluation** and compare thresholds 0.50 and 0.45.
-3. Open **Model Explainability** and identify the strongest global drivers.
-4. Open **Patient Risk Prediction**.
-5. Upload the three-record sample CSV.
-6. Generate predictions.
-7. Explain why the two threshold classifications may differ.
-8. Download the prediction results.
+```text
+Calculate Readmission Risk
+```
 
----
+Do not enter names, medical record numbers, addresses, dates of birth, or other direct identifiers.
 
-## 7. Troubleshooting
+## 4. Upload Multiple Records
 
-### The file is rejected
+Select:
 
-Confirm that the CSV:
+```text
+New Prediction → Upload Multiple Records
+```
+
+Available downloads:
+
+- **Blank CSV Template**
+- **Sample Test CSV**
+
+The blank template contains the required 43 headers and no completed row. The sample contains synthetic demonstration data.
+
+Upload a CSV containing one or more encounter rows. The file must contain all 43 predictors and must not contain:
+
+- `encounter_id`
+- `patient_nbr`
+- `readmitted_30`
+
+The application validates:
+
+- empty input
+- duplicate columns
+- missing required columns
+- unexpected columns
+- invalid numeric text
+- missing numeric values
+- values outside allowed numeric ranges
+- missing or blank categorical values
+- final feature order and transformed feature count
+
+After validation, generate predictions and select a record to review its explanation.
+
+## 5. Use the Synthetic Sample
+
+Select:
+
+```text
+New Prediction → Use Sample Record
+```
+
+Load the sample into the guided form and proceed through the five steps.
+
+The validated sample produces approximately:
+
+```text
+Estimated 30-Day Readmission Risk: 46.39%
+Standard Review Not Triggered
+Additional Screening Recommended
+```
+
+The sample is synthetic, contains no real patient information, and is not taken from the final test set.
+
+## 6. Interpret the Screening Result
+
+### Estimated probability
+
+The percentage is the model-estimated probability of readmission within 30 days.
+
+The probability scale displays:
+
+- the current estimate
+- the 45% additional-screening cutoff
+- the 50% standard-review cutoff
+
+### Standard Review Result — 0.50
+
+Possible results:
+
+```text
+Review Recommended
+Standard Review Not Triggered
+```
+
+### Additional Screening Result — 0.45
+
+Possible results:
+
+```text
+Additional Screening Recommended
+No Additional Screening Flag
+```
+
+A probability between 45% and 50% triggers additional screening but not standard review. This is expected.
+
+## 7. Review the Prediction Factors
+
+Each explained record shows:
+
+- five factors increasing the estimated risk
+- five factors reducing the estimated risk
+
+These factors explain the model calculation for that record. They do not prove that a factor caused or prevented readmission.
+
+A feature can influence another record differently because the prediction depends on all values and their interactions.
+
+## 8. Download Results
+
+### Single-patient screening result
+
+Contains:
+
+- 1 row
+- 5 screening-result columns
+- all 43 entered predictors
+- 48 columns total
+
+### Batch screening results
+
+Contains one row per uploaded record and six user-facing columns:
+
+- Record
+- Estimated 30-Day Readmission Risk (%)
+- Standard Review Cutoff
+- Standard Review Result
+- Additional Screening Cutoff
+- Additional Screening Result
+
+### Prediction factors
+
+Contains:
+
+- record number
+- readmission probability
+- factor direction
+- factor rank
+- readable feature
+- entered value
+- original internal feature name
+
+For each explained record, the file contains five increasing and five reducing factors.
+
+## 9. Suggested Demonstration Sequence
+
+1. Open **Overview** and identify the final model.
+2. Open **Data Explorer** and explain the 11.39% positive class.
+3. Open **Model Performance** and compare 0.50 with 0.45.
+4. Open **Risk Insights** and identify the strongest global drivers.
+5. Open **New Prediction**.
+6. Select **Use Sample Record**.
+7. Review the five guided steps.
+8. Calculate the result.
+9. Explain why 46.39% triggers additional screening but not standard review.
+10. Review increasing and reducing factors.
+11. Download the screening result and prediction factors.
+12. Demonstrate **Upload Multiple Records** using the sample CSV.
+
+## 10. Troubleshooting
+
+### The CSV is rejected
+
+Confirm that the file:
 
 - contains exactly the required 43 predictor columns
-- uses the same column names as the template
-- does not contain duplicate columns
+- uses the template column names
+- contains no duplicate columns
 - contains no blank required values
-- does not include identifiers or the target variable
+- contains values within the displayed numeric ranges
+- does not include identifiers or the target
+- is saved as a readable CSV
+
+### A probability is between the two cutoffs
+
+This is valid. A value from 45% up to, but not including, 50% receives:
+
+```text
+Standard Review Not Triggered
+Additional Screening Recommended
+```
 
 ### The application does not open
 
-Confirm that the deployment is active and refresh the page.
+Refresh the page and confirm that the Streamlit deployment is active.
 
-### The prediction page reports a missing model or artifact
+### The app shows an import or artifact error
 
-Confirm that the final model, preprocessor, schema, and required output files were committed to the GitHub repository.
+Open the Streamlit app management page and review the logs. Confirm that the model, preprocessor, schema, `custom_transformers.py`, `ui/` modules, and required output files are present in the deployed GitHub branch.
 
----
+### The page looks stale after a GitHub update
+
+Reboot the Streamlit application from the management controls. Dependency changes may require a full rebuild.
+
+## 11. Formal Validation
+
+The final application was validated in:
+
+```text
+notebooks/09_streamlit_application_validation.ipynb
+```
+
+Final result:
+
+```text
+Validation steps completed: 6
+Total validation checks: 88
+Passed validation checks: 88
+Failed validation checks: 0
+Overall validation rate: 100.00%
+Application pages: 7
+Prediction input methods: 3
+Approved figures: 22
+Invalid-input tests: 18
+```
+
+The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs.
 
 ## Final Reminder
 
-The application demonstrates a complete machine-learning workflow, including leakage-safe patient-level splitting, imbalanced-class evaluation, threshold analysis, final test evaluation, explainability, and deployment. Model outputs should be interpreted as screening support rather than clinical conclusions.
+The application demonstrates a complete machine-learning workflow including leakage-safe patient-level splitting, imbalanced-class evaluation, threshold analysis, final untouched test evaluation, explainability, guided prediction, CSV prediction, downloadable results, and formal application validation.
+
+Model outputs are screening estimates, not clinical conclusions. Clinical judgment, local validation, privacy controls, security review, and regulatory assessment would be required before any real-world use.
