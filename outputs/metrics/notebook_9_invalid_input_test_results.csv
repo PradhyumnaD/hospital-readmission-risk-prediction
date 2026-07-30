@@ -1,0 +1,19 @@
+Test Name,Input Method,Expected Outcome,Actual Outcome,Exception Type,Validation Message,Result
+Valid CSV input,CSV,Accepted,Accepted,,,PASSED
+CSV columns with surrounding spaces,CSV,Accepted,Accepted,,,PASSED
+CSV columns in shuffled order,CSV,Accepted,Accepted,,,PASSED
+Valid direct-entry dictionary,Direct Entry,Accepted,Accepted,,,PASSED
+Non-DataFrame CSV input,CSV,Rejected,Rejected,TypeError,The uploaded input must be a pandas DataFrame.,PASSED
+Empty CSV input,CSV,Rejected,Rejected,ValueError,The uploaded CSV does not contain any patient records.,PASSED
+Duplicate CSV column,CSV,Rejected,Rejected,ValueError,Duplicate columns found: time_in_hospital,PASSED
+Missing required CSV column,CSV,Rejected,Rejected,ValueError,The CSV is missing required columns: time_in_hospital,PASSED
+Unexpected CSV column,CSV,Rejected,Rejected,ValueError,The CSV contains unexpected columns: unexpected_predictor,PASSED
+Invalid numeric text in CSV,CSV,Rejected,Rejected,ValueError,Invalid or missing numeric value in 'time_in_hospital' at CSV row(s): [2],PASSED
+Missing numeric value in CSV,CSV,Rejected,Rejected,ValueError,Invalid or missing numeric value in 'time_in_hospital' at CSV row(s): [2],PASSED
+Numeric value below minimum,CSV,Rejected,Rejected,ValueError,Values in 'time_in_hospital' must be between 1 and 14. Check CSV row(s): [2],PASSED
+Numeric value above maximum,CSV,Rejected,Rejected,ValueError,Values in 'time_in_hospital' must be between 1 and 14. Check CSV row(s): [2],PASSED
+Missing categorical value in CSV,CSV,Rejected,Rejected,ValueError,Missing categorical value in 'race' at CSV row(s): [2],PASSED
+Blank categorical value in CSV,CSV,Rejected,Rejected,ValueError,Missing categorical value in 'race' at CSV row(s): [2],PASSED
+Missing direct-entry predictor,Direct Entry,Rejected,Rejected,ValueError,Missing required predictors: time_in_hospital,PASSED
+Unexpected direct-entry predictor,Direct Entry,Rejected,Rejected,ValueError,Unexpected predictors received: unexpected_predictor,PASSED
+Invalid direct-entry numeric value,Direct Entry,Rejected,Rejected,ValueError,"Unable to parse string ""not_a_number"" at position 0",PASSED

@@ -1,0 +1,89 @@
+Step Number,Validation Area,Validation Check,Passed,Result
+1,Deployment Assets,Input schema contains 43 predictors,True,PASSED
+1,Deployment Assets,Feature-order list contains 43 predictors,True,PASSED
+1,Deployment Assets,Schema contains 8 numeric predictors,True,PASSED
+1,Deployment Assets,Schema contains 35 categorical predictors,True,PASSED
+1,Deployment Assets,Numeric and categorical counts total 43,True,PASSED
+1,Deployment Assets,Preprocessor expects 43 raw predictors,True,PASSED
+1,Deployment Assets,Preprocessor feature order matches schema,True,PASSED
+1,Deployment Assets,Preprocessor produces 179 transformed features,True,PASSED
+1,Deployment Assets,XGBoost model expects 179 transformed features,True,PASSED
+1,Deployment Assets,Final model supports predict_proba,True,PASSED
+1,Deployment Assets,Main threshold equals 0.50,True,PASSED
+1,Deployment Assets,Recall-focused threshold equals 0.45,True,PASSED
+2,Guided Form Configuration,Form contains four data-entry sections,True,PASSED
+2,Guided Form Configuration,All section keys are unique,True,PASSED
+2,Guided Form Configuration,All section titles are unique,True,PASSED
+2,Guided Form Configuration,Every section has the expected field count,True,PASSED
+2,Guided Form Configuration,Form contains exactly 43 configured fields,True,PASSED
+2,Guided Form Configuration,Form contains 43 unique fields,True,PASSED
+2,Guided Form Configuration,Schema contains 43 unique fields,True,PASSED
+2,Guided Form Configuration,No required predictors are missing,True,PASSED
+2,Guided Form Configuration,No unexpected predictors are configured,True,PASSED
+2,Guided Form Configuration,No predictor appears more than once,True,PASSED
+2,Guided Form Configuration,Configured field set matches schema field set,True,PASSED
+2,Guided Form Configuration,All numeric defaults and ranges are valid,True,PASSED
+2,Guided Form Configuration,All categorical defaults and options are valid,True,PASSED
+2,Guided Form Configuration,Every predictor has a readable label,True,PASSED
+2,Guided Form Configuration,Primary diabetes section contains five fields,True,PASSED
+2,Guided Form Configuration,Additional medication section contains twenty fields,True,PASSED
+2,Guided Form Configuration,Primary and additional diabetes groups do not overlap,True,PASSED
+2,Guided Form Configuration,Diabetes groups cover the complete diabetes section,True,PASSED
+3,Prediction Parity,Batch prediction returns one result per record,True,PASSED
+3,Prediction Parity,Each record receives ten explanation factors,True,PASSED
+3,Prediction Parity,All direct and CSV probabilities match,True,PASSED
+3,Prediction Parity,All standard-review classifications match,True,PASSED
+3,Prediction Parity,All additional-screening classifications match,True,PASSED
+3,Prediction Parity,All explanation factor rankings match,True,PASSED
+3,Prediction Parity,All explanation probabilities match model probabilities,True,PASSED
+4,Invalid-Input Handling,Valid CSV input,True,PASSED
+4,Invalid-Input Handling,CSV columns with surrounding spaces,True,PASSED
+4,Invalid-Input Handling,CSV columns in shuffled order,True,PASSED
+4,Invalid-Input Handling,Valid direct-entry dictionary,True,PASSED
+4,Invalid-Input Handling,Non-DataFrame CSV input,True,PASSED
+4,Invalid-Input Handling,Empty CSV input,True,PASSED
+4,Invalid-Input Handling,Duplicate CSV column,True,PASSED
+4,Invalid-Input Handling,Missing required CSV column,True,PASSED
+4,Invalid-Input Handling,Unexpected CSV column,True,PASSED
+4,Invalid-Input Handling,Invalid numeric text in CSV,True,PASSED
+4,Invalid-Input Handling,Missing numeric value in CSV,True,PASSED
+4,Invalid-Input Handling,Numeric value below minimum,True,PASSED
+4,Invalid-Input Handling,Numeric value above maximum,True,PASSED
+4,Invalid-Input Handling,Missing categorical value in CSV,True,PASSED
+4,Invalid-Input Handling,Blank categorical value in CSV,True,PASSED
+4,Invalid-Input Handling,Missing direct-entry predictor,True,PASSED
+4,Invalid-Input Handling,Unexpected direct-entry predictor,True,PASSED
+4,Invalid-Input Handling,Invalid direct-entry numeric value,True,PASSED
+5,Downloadable Outputs,Batch screening download contains expected columns,True,PASSED
+5,Downloadable Outputs,Single screening download contains expected columns,True,PASSED
+5,Downloadable Outputs,Single screening result contains 43 predictor values,True,PASSED
+5,Downloadable Outputs,Factor download contains expected columns,True,PASSED
+5,Downloadable Outputs,Single download probability matches model output,True,PASSED
+5,Downloadable Outputs,Batch download probability matches model output,True,PASSED
+5,Downloadable Outputs,Single download uses the 0.50 standard cutoff,True,PASSED
+5,Downloadable Outputs,Single download uses the 0.45 screening cutoff,True,PASSED
+5,Downloadable Outputs,Batch download contains valid standard-review wording,True,PASSED
+5,Downloadable Outputs,Batch download contains valid screening wording,True,PASSED
+5,Downloadable Outputs,Each record contains five increasing factors,True,PASSED
+5,Downloadable Outputs,Each record contains five reducing factors,True,PASSED
+5,Downloadable Outputs,Factor directions are complete,True,PASSED
+5,Downloadable Outputs,Factor rankings contain values one through five,True,PASSED
+5,Downloadable Outputs,Single screening CSV reload preserves columns,True,PASSED
+5,Downloadable Outputs,Batch screening CSV reload preserves columns,True,PASSED
+5,Downloadable Outputs,Factor CSV reload preserves columns,True,PASSED
+5,Downloadable Outputs,Single screening CSV reload preserves shape,True,PASSED
+5,Downloadable Outputs,Batch screening CSV reload preserves shape,True,PASSED
+5,Downloadable Outputs,Factor CSV reload preserves shape,True,PASSED
+5,Downloadable Outputs,Single screening CSV payload is not empty,True,PASSED
+5,Downloadable Outputs,Batch screening CSV payload is not empty,True,PASSED
+5,Downloadable Outputs,Factor CSV payload is not empty,True,PASSED
+6,Application Structure,All required application files exist,True,PASSED
+6,Application Structure,All Python application files have valid syntax,True,PASSED
+6,Application Structure,All seven application pages are configured,True,PASSED
+6,Application Structure,All three prediction input methods are configured,True,PASSED
+6,Application Structure,All essential app functions are defined,True,PASSED
+6,Application Structure,All reusable UI components are defined,True,PASSED
+6,Application Structure,Professional Streamlit theme is valid,True,PASSED
+6,Application Structure,Blank and synthetic templates are valid,True,PASSED
+6,Application Structure,All 22 approved figures are available,True,PASSED
+6,Application Structure,Public wording and threshold references are valid,True,PASSED

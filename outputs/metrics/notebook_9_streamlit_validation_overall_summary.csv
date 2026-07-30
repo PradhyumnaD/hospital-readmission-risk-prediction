@@ -1,0 +1,15 @@
+Validation Property,Validated Value
+Validation steps completed,6
+Total validation checks,88
+Passed validation checks,88
+Failed validation checks,0
+Overall pass rate,100.00%
+Raw predictors validated,43
+Transformed features validated,179
+Application pages validated,7
+Prediction input methods validated,3
+Approved figures validated,22
+Invalid-input tests completed,18
+Final model,XGBClassifier
+Standard review cutoff,0.5
+Additional screening cutoff,0.45

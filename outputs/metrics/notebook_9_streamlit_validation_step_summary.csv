@@ -1,0 +1,7 @@
+Step Number,Validation Area,Total Checks,Passed Checks,Failed Checks,Pass Rate (%),Result
+1,Deployment Assets,12,12,0,100.0,PASSED
+2,Guided Form Configuration,18,18,0,100.0,PASSED
+3,Prediction Parity,7,7,0,100.0,PASSED
+4,Invalid-Input Handling,18,18,0,100.0,PASSED
+5,Downloadable Outputs,23,23,0,100.0,PASSED
+6,Application Structure,10,10,0,100.0,PASSED
