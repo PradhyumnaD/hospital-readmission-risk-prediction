@@ -2,7 +2,7 @@
 
 ## Hospital Readmission Risk Prediction
 
-This guide explains how to use the finalized seven-page capstone dashboard, enter one encounter through the guided form, upload multiple CSV records, load a synthetic sample, interpret both screening cutoffs, review record-level explanations, and download results.
+This guide explains how to use the finalized eight-page capstone dashboard, review formal validation evidence, enter one encounter through the guided form, upload multiple CSV records, load a synthetic sample, interpret both screening cutoffs, review record-level explanations, and download results.
 
 > **Academic-use notice:** This application is a decision-support prototype. It does not provide a medical diagnosis and must not be used as the sole basis for patient-care decisions. Use only synthetic or appropriately de-identified records.
 
@@ -12,15 +12,16 @@ Public deployment:
 
 [Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
-The left sidebar contains seven pages:
+The left sidebar contains eight pages:
 
 1. **Overview**
 2. **Data Explorer**
 3. **Model Development**
 4. **Model Performance**
-5. **Saved Figures**
-6. **Risk Insights**
-7. **New Prediction**
+5. **Risk Insights**
+6. **Application Validation**
+7. **Saved Figures**
+8. **New Prediction**
 
 ## 2. Review the Dashboard Pages
 
@@ -86,15 +87,31 @@ At 0.45:
 
 Lowering the cutoff caught 198 additional readmissions and generated 1,624 additional false-positive alerts.
 
-### Saved Figures
-
-Select an analysis stage and figure from the dropdown menus. The validated application contains 22 approved figures and no missing files.
-
 ### Risk Insights
 
 Shows the strongest global grouped SHAP drivers.
 
 Global importance summarizes model behavior across many encounters. It does not prove that a feature medically caused readmission and does not replace the explanation of an individual record.
+
+### Application Validation
+
+Displays the saved Notebook 09 quality-assurance evidence:
+
+- 98 total checks
+- 98 passed
+- 0 failed
+- 100.00% pass rate
+- validation coverage by area
+- prediction consistency
+- input-validation results
+- download-validation results
+- application-structure checks
+- approved-figure checks
+- all 98 detailed checks with filtering by validation area
+
+### Saved Figures
+
+Select an analysis stage and figure from the dropdown menus. The validated application contains 22 approved figures and no missing files.
 
 ### New Prediction
 
@@ -148,11 +165,15 @@ Enter:
 
 ### Step 5 — Review
 
-Review all 43 values before selecting:
+The form is pre-filled with validated demonstration defaults because all 43 predictors are required. Review or replace every value so that it represents the encounter being assessed.
+
+Select the confirmation checkbox:
 
 ```text
-Calculate Readmission Risk
+I have reviewed all 43 predictor values and confirm that they are correct and appropriately de-identified.
 ```
+
+The **Calculate Readmission Risk** button remains disabled until the confirmation box is selected. Changing any input clears the confirmation and previously calculated results.
 
 Do not enter names, medical record numbers, addresses, dates of birth, or other direct identifiers.
 
@@ -285,10 +306,10 @@ Contains:
 - factor direction
 - factor rank
 - readable feature
-- entered value
+- readable patient value
 - original internal feature name
 
-For each explained record, the file contains five increasing and five reducing factors.
+For each explained record, the file contains five increasing and five reducing factors. Categorical values use user-friendly labels such as `70–79 years` and `Discharged to Home`, while the original feature name is retained for traceability.
 
 ## 9. Suggested Demonstration Sequence
 
@@ -296,14 +317,16 @@ For each explained record, the file contains five increasing and five reducing f
 2. Open **Data Explorer** and explain the 11.39% positive class.
 3. Open **Model Performance** and compare 0.50 with 0.45.
 4. Open **Risk Insights** and identify the strongest global drivers.
-5. Open **New Prediction**.
-6. Select **Use Sample Record**.
-7. Review the five guided steps.
-8. Calculate the result.
-9. Explain why 46.39% triggers additional screening but not standard review.
-10. Review increasing and reducing factors.
-11. Download the screening result and prediction factors.
-12. Demonstrate **Upload Multiple Records** using the sample CSV.
+5. Open **Application Validation** and show the 98 of 98 passed checks.
+6. Open **New Prediction**.
+7. Select **Use Sample Record**.
+8. Review the five guided steps.
+9. Select the confirmation checkbox.
+10. Calculate the result.
+11. Explain why 46.39% triggers additional screening but not standard review.
+12. Review increasing and reducing factors.
+13. Download the screening result and prediction factors.
+14. Demonstrate **Upload Multiple Records** using the sample CSV.
 
 ## 10. Troubleshooting
 
@@ -352,17 +375,28 @@ Final result:
 
 ```text
 Validation steps completed: 6
-Total validation checks: 88
-Passed validation checks: 88
+Total validation checks: 98
+Passed validation checks: 98
 Failed validation checks: 0
 Overall validation rate: 100.00%
-Application pages: 7
+Application pages: 8
 Prediction input methods: 3
 Approved figures: 22
 Invalid-input tests: 18
 ```
 
-The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs.
+Validation-area totals:
+
+```text
+Deployment Assets: 12 of 12 passed
+Guided Form Configuration: 18 of 18 passed
+Prediction Parity: 7 of 7 passed
+Invalid-Input Handling: 18 of 18 passed
+Downloadable Outputs: 28 of 28 passed
+Application Structure: 15 of 15 passed
+```
+
+The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs. It also confirmed the eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
 
 ## Final Reminder
 

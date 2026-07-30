@@ -100,6 +100,61 @@ SAMPLE_PATIENT_PATH = (
 
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures"
 
+VALIDATION_JSON_SUMMARY_PATH = (
+    PROJECT_ROOT
+    / "artifacts"
+    / "notebook_9_streamlit_validation_summary.json"
+)
+
+VALIDATION_OVERALL_SUMMARY_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_streamlit_validation_overall_summary.csv"
+)
+
+VALIDATION_STEP_SUMMARY_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_streamlit_validation_step_summary.csv"
+)
+
+VALIDATION_CHECKS_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_streamlit_validation_checks.csv"
+)
+
+VALIDATION_PARITY_RESULTS_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_direct_csv_parity_results.csv"
+)
+
+VALIDATION_INVALID_INPUT_RESULTS_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_invalid_input_test_results.csv"
+)
+
+VALIDATION_DOWNLOAD_RESULTS_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_download_validation_results.csv"
+)
+
+VALIDATION_FIGURE_RESULTS_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "metrics"
+    / "notebook_9_approved_figure_validation.csv"
+)
+
 
 # ---------------------------------------------------------
 # Guided single-patient form foundation
@@ -141,6 +196,9 @@ def initialize_single_patient_state() -> None:
     if "single_explanation_result" not in st.session_state:
         st.session_state["single_explanation_result"] = None
 
+    if "single_patient_values_confirmed" not in st.session_state:
+        st.session_state["single_patient_values_confirmed"] = False
+
 
 def clear_single_patient_widget_state() -> None:
     """Remove widget keys used by the guided patient form."""
@@ -160,6 +218,8 @@ def invalidate_single_patient_results() -> None:
 
     st.session_state["single_prediction_result"] = None
     st.session_state["single_explanation_result"] = None
+    st.session_state["single_patient_values_confirmed"] = False
+
     st.session_state.pop("single_screening_download", None)
     st.session_state.pop("single_explanation_download", None)
 
@@ -338,7 +398,7 @@ def readable_form_value(
     value,
     schema: dict,
 ) -> str:
-    """Return a readable form value for the review screen."""
+    """Return a readable form value for review and download output."""
 
     if feature in schema["categorical_features"]:
         return get_option_label(feature, value)
@@ -347,6 +407,67 @@ def readable_form_value(
         return f"{value} day(s)"
 
     return str(value)
+
+
+def create_readable_explanation_download(
+    explanation_result: pd.DataFrame,
+    schema: dict,
+) -> pd.DataFrame:
+    """
+    Create a user-friendly explanation CSV while retaining the original
+    technical feature name for traceability.
+    """
+
+    download_columns = [
+        "Record Number",
+        "Readmission Probability (%)",
+        "Direction",
+        "Factor Rank",
+        "Feature",
+        "Patient Value",
+        "Original Feature",
+    ]
+
+    missing_columns = [
+        column
+        for column in download_columns
+        if column not in explanation_result.columns
+    ]
+
+    if missing_columns:
+        raise KeyError(
+            "Explanation output is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+
+    readable_download = explanation_result[
+        download_columns
+    ].copy()
+
+    readable_download[
+        "Readmission Probability (%)"
+    ] = (
+        pd.to_numeric(
+            readable_download[
+                "Readmission Probability (%)"
+            ],
+            errors="raise",
+        )
+        .round(4)
+    )
+
+    readable_download["Patient Value"] = (
+        readable_download.apply(
+            lambda row: readable_form_value(
+                feature=str(row["Original Feature"]),
+                value=row["Patient Value"],
+                schema=schema,
+            ),
+            axis=1,
+        )
+    )
+
+    return readable_download
 
 
 def render_single_patient_review(schema: dict) -> None:
@@ -384,6 +505,14 @@ def render_single_patient_review(schema: dict) -> None:
     st.warning(
         "This is an academic decision-support prototype. Confirm that all "
         "values are correct and appropriately de-identified."
+    )
+
+    st.checkbox(
+        (
+            "I have reviewed all 43 predictor values and confirm that "
+            "they are correct and appropriately de-identified."
+        ),
+        key="single_patient_values_confirmed",
     )
 
 
@@ -433,17 +562,12 @@ def calculate_single_patient_results(schema: dict) -> None:
         **patient_values,
     }
 
-    explanation_download = explanation_result[
-        [
-            "Record Number",
-            "Readmission Probability (%)",
-            "Direction",
-            "Factor Rank",
-            "Feature",
-            "Patient Value",
-            "Original Feature",
-        ]
-    ].copy()
+    explanation_download = (
+        create_readable_explanation_download(
+            explanation_result=explanation_result,
+            schema=schema,
+        )
+    )
 
     st.session_state["single_prediction_result"] = prediction_result
     st.session_state["single_explanation_result"] = explanation_result
@@ -665,15 +789,23 @@ def render_single_patient_form() -> None:
                 column_count=3,
             )
 
-        st.caption(
-            "Schema defaults are provided for convenience. Review every "
-            "field before calculating a prediction."
+        st.info(
+            "This form is pre-filled with validated demonstration defaults "
+            "because the model requires all 43 predictors. Replace or review "
+            "every value so that it represents the encounter being assessed."
         )
 
     else:
         render_single_patient_review(schema)
 
     st.divider()
+
+    values_confirmed = bool(
+        st.session_state.get(
+            "single_patient_values_confirmed",
+            False,
+        )
+    )
 
     navigation_col1, navigation_col2, navigation_col3 = st.columns(
         [1, 1, 1]
@@ -717,6 +849,15 @@ def render_single_patient_form() -> None:
                 type="primary",
                 use_container_width=True,
                 key="single_form_calculate",
+                disabled=not values_confirmed,
+                help=(
+                    None
+                    if values_confirmed
+                    else (
+                        "Review all values and select the confirmation "
+                        "checkbox before calculating."
+                    )
+                ),
             ):
                 try:
                     with st.spinner(
@@ -1159,6 +1300,204 @@ def load_global_shap_importance(csv_path: str) -> pd.DataFrame:
     )
 
     return shap_data.sort_values("rank")
+
+
+def validate_required_columns(
+    data: pd.DataFrame,
+    required_columns: list[str],
+    source_name: str,
+) -> pd.DataFrame:
+    """Validate and return only the required columns from a CSV result."""
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in data.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"{source_name} is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+
+    return data[required_columns].copy()
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_overall_summary(csv_path: str) -> dict:
+    """Load Notebook 09 overall validation properties."""
+
+    summary_data = pd.read_csv(csv_path)
+    summary_data = validate_required_columns(
+        summary_data,
+        ["Validation Property", "Validated Value"],
+        "The overall validation summary",
+    )
+
+    return dict(
+        zip(
+            summary_data["Validation Property"].astype(str),
+            summary_data["Validated Value"].astype(str),
+        )
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_step_summary(csv_path: str) -> pd.DataFrame:
+    """Load validation totals for each Notebook 09 validation area."""
+
+    step_data = pd.read_csv(csv_path)
+    required_columns = [
+        "Step Number",
+        "Validation Area",
+        "Total Checks",
+        "Passed Checks",
+        "Failed Checks",
+        "Pass Rate (%)",
+        "Result",
+    ]
+
+    step_data = validate_required_columns(
+        step_data,
+        required_columns,
+        "The validation step summary",
+    )
+
+    numeric_columns = [
+        "Step Number",
+        "Total Checks",
+        "Passed Checks",
+        "Failed Checks",
+        "Pass Rate (%)",
+    ]
+
+    for column in numeric_columns:
+        step_data[column] = pd.to_numeric(
+            step_data[column],
+            errors="raise",
+        )
+
+    return step_data.sort_values("Step Number")
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_checks(csv_path: str) -> pd.DataFrame:
+    """Load all individual Notebook 09 validation checks."""
+
+    checks_data = pd.read_csv(csv_path)
+    required_columns = [
+        "Step Number",
+        "Validation Area",
+        "Validation Check",
+        "Passed",
+        "Result",
+    ]
+
+    checks_data = validate_required_columns(
+        checks_data,
+        required_columns,
+        "The detailed validation checks file",
+    )
+
+    checks_data["Passed"] = (
+        checks_data["Passed"]
+        .astype(str)
+        .str.strip()
+        .str.lower()
+        .map({"true": True, "false": False})
+    )
+
+    if checks_data["Passed"].isna().any():
+        raise ValueError(
+            "The detailed validation checks file contains an invalid "
+            "Passed value."
+        )
+
+    return checks_data.sort_values(
+        ["Step Number", "Validation Check"]
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_parity_results(csv_path: str) -> pd.DataFrame:
+    """Load direct-entry versus CSV prediction parity results."""
+
+    parity_data = pd.read_csv(csv_path)
+    required_columns = [
+        "Record Number",
+        "Direct Probability (%)",
+        "CSV Probability (%)",
+        "Probability Difference",
+        "Probability Match",
+        "Standard Review Match",
+        "Additional Screening Match",
+        "Explanation Factors Match",
+        "Explanation Probability Match",
+    ]
+
+    return validate_required_columns(
+        parity_data,
+        required_columns,
+        "The prediction parity results file",
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_invalid_input_results(
+    csv_path: str,
+) -> pd.DataFrame:
+    """Load valid- and invalid-input handling test results."""
+
+    input_data = pd.read_csv(csv_path)
+    required_columns = [
+        "Test Name",
+        "Input Method",
+        "Expected Outcome",
+        "Actual Outcome",
+        "Exception Type",
+        "Validation Message",
+        "Result",
+    ]
+
+    return validate_required_columns(
+        input_data,
+        required_columns,
+        "The invalid-input test results file",
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_download_results(csv_path: str) -> pd.DataFrame:
+    """Load downloadable-output validation results."""
+
+    download_data = pd.read_csv(csv_path)
+
+    return validate_required_columns(
+        download_data,
+        ["Validation Check", "Result"],
+        "The download validation results file",
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_validation_figure_results(csv_path: str) -> pd.DataFrame:
+    """Load approved-figure validation results."""
+
+    figure_data = pd.read_csv(csv_path)
+    required_columns = [
+        "Figure Label",
+        "Category",
+        "Filename",
+        "File Exists",
+        "Result",
+    ]
+
+    return validate_required_columns(
+        figure_data,
+        required_columns,
+        "The approved-figure validation file",
+    )
 
 
 # ---------------------------------------------------------
@@ -2032,6 +2371,449 @@ def render_final_evaluation() -> None:
         st.exception(error)
 
 
+def render_application_validation() -> None:
+    """Render saved Notebook 09 application-validation evidence."""
+
+    render_page_hero(
+        "Application Validation",
+        (
+            "Review the saved evidence used to verify deployment assets, "
+            "guided-form configuration, prediction consistency, input "
+            "handling, downloadable outputs, and application structure."
+        ),
+        eyebrow="Quality Assurance",
+        icon="✓",
+    )
+
+    validation_files = {
+        "Overall summary": VALIDATION_OVERALL_SUMMARY_PATH,
+        "Step summary": VALIDATION_STEP_SUMMARY_PATH,
+        "Detailed checks": VALIDATION_CHECKS_PATH,
+        "Prediction parity": VALIDATION_PARITY_RESULTS_PATH,
+        "Invalid-input tests": VALIDATION_INVALID_INPUT_RESULTS_PATH,
+        "Download validation": VALIDATION_DOWNLOAD_RESULTS_PATH,
+        "Approved figures": VALIDATION_FIGURE_RESULTS_PATH,
+    }
+
+    missing_files = [
+        f"{label}: {path}"
+        for label, path in validation_files.items()
+        if not path.exists()
+    ]
+
+    if missing_files:
+        st.error(
+            "The validation dashboard cannot be displayed because one or "
+            "more saved validation files are missing."
+        )
+        for missing_file in missing_files:
+            st.write(f"- `{missing_file}`")
+        return
+
+    try:
+        overall_summary = load_validation_overall_summary(
+            str(VALIDATION_OVERALL_SUMMARY_PATH)
+        )
+        step_summary = load_validation_step_summary(
+            str(VALIDATION_STEP_SUMMARY_PATH)
+        )
+        validation_checks = load_validation_checks(
+            str(VALIDATION_CHECKS_PATH)
+        )
+        parity_results = load_validation_parity_results(
+            str(VALIDATION_PARITY_RESULTS_PATH)
+        )
+        invalid_input_results = load_validation_invalid_input_results(
+            str(VALIDATION_INVALID_INPUT_RESULTS_PATH)
+        )
+        download_results = load_validation_download_results(
+            str(VALIDATION_DOWNLOAD_RESULTS_PATH)
+        )
+        figure_results = load_validation_figure_results(
+            str(VALIDATION_FIGURE_RESULTS_PATH)
+        )
+
+        def summary_integer(property_name: str) -> int:
+            value = overall_summary.get(property_name)
+            if value is None:
+                raise KeyError(
+                    f"Missing validation summary property: {property_name}"
+                )
+            return int(float(value))
+
+        total_checks = summary_integer("Total validation checks")
+        passed_checks = summary_integer("Passed validation checks")
+        failed_checks = summary_integer("Failed validation checks")
+        pass_rate = str(
+            overall_summary.get("Overall pass rate", "Unavailable")
+        )
+
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+
+        with metric_col1:
+            render_metric_card(
+                "Total Checks",
+                f"{total_checks:,}",
+                note="Saved Notebook 09 checks",
+                icon="▦",
+            )
+
+        with metric_col2:
+            render_metric_card(
+                "Passed",
+                f"{passed_checks:,}",
+                note="Checks meeting expectations",
+                icon="✓",
+            )
+
+        with metric_col3:
+            render_metric_card(
+                "Failed",
+                f"{failed_checks:,}",
+                note="Expected to remain zero",
+                icon="!",
+            )
+
+        with metric_col4:
+            render_metric_card(
+                "Pass Rate",
+                pass_rate,
+                note="Overall validation result",
+                icon="◎",
+            )
+
+        if failed_checks == 0 and passed_checks == total_checks:
+            render_key_message(
+                "Saved validation result: PASSED",
+                (
+                    f"Notebook 09 completed {total_checks:,} checks. "
+                    f"All {passed_checks:,} checks passed and no failures "
+                    "were recorded in the saved validation evidence."
+                ),
+                icon="✓",
+                tone="teal",
+            )
+        else:
+            render_key_message(
+                "Saved validation result requires review",
+                (
+                    f"{failed_checks:,} of {total_checks:,} saved checks "
+                    "did not pass."
+                ),
+                icon="!",
+                tone="amber",
+            )
+
+        st.caption(
+            "These results were generated by "
+            "The notebooks/09_streamlit_application_validation.ipynb. "
+            "The final validation covers all eight application pages, "
+            "three prediction input methods, downloadable outputs, "
+            "input handling, prediction consistency, and deployment assets."
+        )
+
+        st.markdown(
+            '<div class="hr-section-title">'
+            'Validation coverage by area'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        chart_col, table_col = st.columns([1.15, 1])
+
+        with chart_col:
+            with st.container(border=True):
+                validation_chart = (
+                    alt.Chart(step_summary)
+                    .mark_bar(
+                        cornerRadiusTopRight=6,
+                        cornerRadiusBottomRight=6,
+                    )
+                    .encode(
+                        y=alt.Y(
+                            "Validation Area:N",
+                            title=None,
+                            sort=alt.SortField(
+                                field="Step Number",
+                                order="ascending",
+                            ),
+                            axis=alt.Axis(
+                                labelLimit=230,
+                                labelPadding=8,
+                            ),
+                        ),
+                        x=alt.X(
+                            "Passed Checks:Q",
+                            title="Passed checks",
+                            scale=alt.Scale(zero=True),
+                        ),
+                        tooltip=[
+                            alt.Tooltip(
+                                "Validation Area:N",
+                                title="Validation Area",
+                            ),
+                            alt.Tooltip(
+                                "Total Checks:Q",
+                                title="Total Checks",
+                                format=",",
+                            ),
+                            alt.Tooltip(
+                                "Passed Checks:Q",
+                                title="Passed Checks",
+                                format=",",
+                            ),
+                            alt.Tooltip(
+                                "Failed Checks:Q",
+                                title="Failed Checks",
+                                format=",",
+                            ),
+                            alt.Tooltip(
+                                "Pass Rate (%):Q",
+                                title="Pass Rate",
+                                format=".1f",
+                            ),
+                        ],
+                    )
+                    .properties(height=360)
+                )
+
+                st.altair_chart(
+                    validation_chart,
+                    use_container_width=True,
+                )
+
+        with table_col:
+            with st.container(border=True):
+                st.dataframe(
+                    step_summary[
+                        [
+                            "Validation Area",
+                            "Total Checks",
+                            "Passed Checks",
+                            "Failed Checks",
+                            "Pass Rate (%)",
+                            "Result",
+                        ]
+                    ],
+                    hide_index=True,
+                    width="stretch",
+                    height=360,
+                    column_config={
+                        "Pass Rate (%)": st.column_config.NumberColumn(
+                            "Pass Rate (%)",
+                            format="%.1f%%",
+                        )
+                    },
+                )
+
+        st.markdown(
+            '<div class="hr-section-title">'
+            'Detailed validation evidence'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        (
+            parity_tab,
+            input_tab,
+            download_tab,
+            structure_tab,
+            figures_tab,
+        ) = st.tabs(
+            [
+                "Prediction Consistency",
+                "Input Validation",
+                "Downloads",
+                "Application Structure",
+                "Approved Figures",
+            ]
+        )
+
+        with parity_tab:
+            parity_boolean_columns = [
+                "Probability Match",
+                "Standard Review Match",
+                "Additional Screening Match",
+                "Explanation Factors Match",
+                "Explanation Probability Match",
+            ]
+
+            parity_passed = (
+                parity_results[parity_boolean_columns]
+                .astype(bool)
+                .all(axis=None)
+            )
+
+            if parity_passed:
+                st.success(
+                    "Direct-entry and CSV prediction outputs matched across "
+                    "probability, both threshold decisions, and explanation "
+                    "results."
+                )
+            else:
+                st.warning(
+                    "One or more prediction-parity checks require review."
+                )
+
+            st.dataframe(
+                parity_results,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "Direct Probability (%)": (
+                        st.column_config.NumberColumn(
+                            "Direct Probability (%)",
+                            format="%.5f",
+                        )
+                    ),
+                    "CSV Probability (%)": (
+                        st.column_config.NumberColumn(
+                            "CSV Probability (%)",
+                            format="%.5f",
+                        )
+                    ),
+                    "Probability Difference": (
+                        st.column_config.NumberColumn(
+                            "Probability Difference",
+                            format="%.8f",
+                        )
+                    ),
+                },
+            )
+
+        with input_tab:
+            input_passed = int(
+                invalid_input_results["Result"]
+                .astype(str)
+                .str.upper()
+                .eq("PASSED")
+                .sum()
+            )
+
+            st.success(
+                f"{input_passed:,} of "
+                f"{len(invalid_input_results):,} valid- and invalid-input "
+                "tests passed."
+            )
+
+            st.dataframe(
+                invalid_input_results,
+                hide_index=True,
+                width="stretch",
+                height=520,
+            )
+
+        with download_tab:
+            download_passed = int(
+                download_results["Result"]
+                .astype(str)
+                .str.upper()
+                .eq("PASSED")
+                .sum()
+            )
+
+            st.success(
+                f"{download_passed:,} of "
+                f"{len(download_results):,} downloadable-output checks "
+                "passed."
+            )
+
+            st.dataframe(
+                download_results,
+                hide_index=True,
+                width="stretch",
+                height=460,
+            )
+
+        with structure_tab:
+            structure_checks = validation_checks[
+                validation_checks["Validation Area"]
+                == "Application Structure"
+            ].copy()
+
+            if structure_checks.empty:
+                st.warning(
+                    "No Application Structure checks were found in the "
+                    "saved validation evidence."
+                )
+            else:
+                st.success(
+                    f"{int(structure_checks['Passed'].sum()):,} of "
+                    f"{len(structure_checks):,} application-structure "
+                    "checks passed."
+                )
+                st.dataframe(
+                    structure_checks[
+                        [
+                            "Validation Check",
+                            "Passed",
+                            "Result",
+                        ]
+                    ],
+                    hide_index=True,
+                    width="stretch",
+                )
+
+        with figures_tab:
+            figure_passed = int(
+                figure_results["Result"]
+                .astype(str)
+                .str.upper()
+                .eq("PASSED")
+                .sum()
+            )
+
+            st.success(
+                f"{figure_passed:,} of "
+                f"{len(figure_results):,} approved figure files were found "
+                "and validated."
+            )
+
+            st.dataframe(
+                figure_results,
+                hide_index=True,
+                width="stretch",
+                height=520,
+            )
+
+        with st.expander(
+            f"View all {len(validation_checks):,} saved validation checks"
+        ):
+            selected_validation_area = st.selectbox(
+                "Filter by validation area",
+                options=[
+                    "All Validation Areas",
+                    *step_summary["Validation Area"].tolist(),
+                ],
+                key="validation_area_filter",
+            )
+
+            if selected_validation_area == "All Validation Areas":
+                filtered_checks = validation_checks
+            else:
+                filtered_checks = validation_checks[
+                    validation_checks["Validation Area"]
+                    == selected_validation_area
+                ]
+
+            st.dataframe(
+                filtered_checks,
+                hide_index=True,
+                width="stretch",
+                height=600,
+            )
+
+        st.caption(
+            "Validation evidence sources: artifacts/"
+            "notebook_9_streamlit_validation_summary.json and "
+            "outputs/metrics/notebook_9_*.csv"
+        )
+
+    except Exception as error:
+        st.error("The saved application-validation evidence could not load.")
+        st.exception(error)
+
+
 def render_saved_figures() -> None:
     """Render the redesigned saved-figures gallery."""
 
@@ -2613,16 +3395,12 @@ def render_batch_prediction() -> None:
                     axis=1,
                 )
 
-                explanation_download = explanation_results[
-                    [
-                        "Record Number",
-                        "Readmission Probability (%)",
-                        "Direction",
-                        "Factor Rank",
-                        "Feature",
-                        "Patient Value",
-                    ]
-                ].copy()
+                explanation_download = (
+                    create_readable_explanation_download(
+                        explanation_result=explanation_results,
+                        schema=load_guided_form_schema(),
+                    )
+                )
 
                 st.session_state["batch_prediction_results"] = (
                     prediction_results
@@ -2967,8 +3745,9 @@ with st.sidebar:
             "Data Explorer",
             "Model Development",
             "Model Performance",
-            "Saved Figures",
             "Risk Insights",
+            "Application Validation",
+            "Saved Figures",
             "New Prediction",
         ],
         label_visibility="collapsed",
@@ -2997,6 +3776,8 @@ elif selected_page == "Saved Figures":
     render_saved_figures()
 elif selected_page == "Risk Insights":
     render_explainability()
+elif selected_page == "Application Validation":
+    render_application_validation()
 elif selected_page == "New Prediction":
     render_prediction()
 

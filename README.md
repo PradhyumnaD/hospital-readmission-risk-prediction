@@ -49,7 +49,7 @@ A complete machine-learning capstone project for estimating the probability of *
 **Prediction point:** At or near hospital discharge  
 **Prediction target:** Readmission within 30 days  
 **Final model:** Tuned XGBoost  
-**Application:** Seven-page Streamlit dashboard with guided direct entry, batch CSV upload, and synthetic sample workflows  
+**Application:** Eight-page Streamlit dashboard with guided direct entry, batch CSV upload, synthetic sample workflows, and a formal application-validation dashboard  
 **Explainability:** Global grouped SHAP analysis and dynamic record-level prediction explanations  
 **Deployed application:** [Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
@@ -74,12 +74,12 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
 | Final model and threshold selection | Completed |
 | Untouched test-set evaluation | Completed |
 | Explainable AI analysis | Completed |
-| Seven-page Streamlit dashboard | Completed |
+| Eight-page Streamlit dashboard | Completed |
 | Guided five-step patient-entry form | Completed |
 | Batch CSV workflow | Completed |
 | Synthetic sample workflow | Completed |
 | Dynamic record-level explanations | Completed |
-| Comprehensive application validation | Completed — 88 of 88 checks passed |
+| Comprehensive application validation | Completed — 98 of 98 checks passed |
 | Streamlit Community Cloud deployment | Completed |
 | GitHub repository | Completed |
 
@@ -105,14 +105,16 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
   - reduced false negatives by **198**
   - produced **1,624 additional false-positive alerts**
 - Streamlit interface:
-  - **7 pages**
+  - **8 pages**
   - **3 input methods**
   - **5-step guided form**
+  - explicit confirmation before prediction
   - dynamic record-level explanations
-  - downloadable screening and factor files
+  - readable downloadable screening and factor files
+  - dedicated Application Validation dashboard
 - Notebook 09 application validation:
-  - **88 checks**
-  - **88 passed**
+  - **98 checks**
+  - **98 passed**
   - **0 failed**
   - **100.00% pass rate**
   - **22 approved figures found**
@@ -615,15 +617,16 @@ The public deployment is available at:
 
 ### Application pages
 
-The final sidebar contains seven pages:
+The final sidebar contains eight pages:
 
 1. **Overview**
 2. **Data Explorer**
 3. **Model Development**
 4. **Model Performance**
-5. **Saved Figures**
-6. **Risk Insights**
-7. **New Prediction**
+5. **Risk Insights**
+6. **Application Validation**
+7. **Saved Figures**
+8. **New Prediction**
 
 ### Main application features
 
@@ -635,7 +638,10 @@ The final sidebar contains seven pages:
 - Threshold trade-off interpretation
 - Saved model-development, final-evaluation, and explainability figures
 - Global grouped SHAP driver table and chart
+- Application Validation dashboard backed by Notebook 09 evidence files
 - Guided five-step single-record form
+- Explicit review confirmation before prediction
+- Automatic clearing of confirmation and prior results after input changes
 - Batch CSV upload
 - Synthetic sample-record workflow
 - Standard review cutoff at 0.50
@@ -643,7 +649,7 @@ The final sidebar contains seven pages:
 - Probability scale with both cutoffs and the current prediction marker
 - Dynamic top-five increasing and top-five reducing factors
 - Downloadable screening results
-- Downloadable prediction-factor results
+- Downloadable prediction-factor results with readable values and retained original feature names
 - De-identification guidance
 - Academic decision-support disclaimer
 
@@ -674,7 +680,7 @@ The guided form collects all 43 predictors in five steps:
 4. **Diabetes Management**
 5. **Review**
 
-The user reviews all values before selecting **Calculate Readmission Risk**.
+The form is pre-filled with validated demonstration defaults because the model requires all 43 predictors. The user must review or replace every value, select the confirmation checkbox on the Review step, and then choose **Calculate Readmission Risk**. Changing any field clears the confirmation and previously calculated results.
 
 The result includes:
 
@@ -763,6 +769,8 @@ A record can trigger additional screening at 0.45 without triggering standard re
 - 5 increasing factors
 - 5 reducing factors
 - 7 output columns
+- readable categorical values such as `70–79 years` and `Discharged to Home`
+- original internal feature names retained for traceability
 
 Notebook 09 verified that the direct-entry and CSV workflows return identical probabilities, threshold decisions, and explanation-factor rankings for identical input values.
 
@@ -878,9 +886,10 @@ notebooks/09_streamlit_application_validation.ipynb
 The completed notebook reports:
 
 ```text
-88 checks passed
+98 checks passed
 0 checks failed
 100.00% pass rate
+8 application pages validated
 ```
 
 ## Online Deployment
@@ -907,7 +916,7 @@ Before deployment:
 2. Confirm that the final model and preprocessor are committed and available through Git or Git LFS.
 3. Confirm that the application assets, CSV files, JSON files, metrics, and figures are present.
 4. Run the Python syntax checks.
-5. Run Notebook 09 and confirm 88 of 88 checks pass.
+5. Run Notebook 09 and confirm 98 of 98 checks pass.
 6. Push the final repository to GitHub.
 
 ### Community Cloud setup
@@ -918,7 +927,7 @@ Before deployment:
 4. Set the entrypoint to `app.py`.
 5. Select the Python version compatible with the serialized model environment.
 6. Deploy and monitor the build logs.
-7. Validate all seven pages and all three input methods.
+7. Validate all eight pages and all three input methods.
 
 The application does not require secrets or external credentials.
 
@@ -1343,14 +1352,25 @@ Validate the finalized Streamlit application without retraining the model or cha
 
 ```text
 Validation steps completed: 6
-Total validation checks: 88
-Passed validation checks: 88
+Total validation checks: 98
+Passed validation checks: 98
 Failed validation checks: 0
 Overall pass rate: 100.00%
-Application pages: 7
+Application pages: 8
 Prediction input methods: 3
 Approved figures: 22
 Invalid-input tests: 18
+```
+
+Validation-area totals:
+
+```text
+Deployment Assets: 12 of 12 passed
+Guided Form Configuration: 18 of 18 passed
+Prediction Parity: 7 of 7 passed
+Invalid-Input Handling: 18 of 18 passed
+Downloadable Outputs: 28 of 28 passed
+Application Structure: 15 of 15 passed
 ```
 
 ### Main outputs
@@ -1368,7 +1388,7 @@ outputs/metrics/notebook_9_approved_figure_validation.csv
 
 ### Main conclusion
 
-The finalized application passed all structural, prediction, explanation, input-validation, download, theme, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values.
+The finalized application passed all structural, prediction, explanation, input-validation, download, theme, validation-dashboard, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values. The updated checks also confirmed the eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
 
 </details>
 
@@ -1461,6 +1481,20 @@ Transformed input features: 179
 predict_proba available: True
 ```
 
+### Application Validation dashboard
+
+The eighth application page reads the saved Notebook 09 evidence files and displays:
+
+- total, passed, and failed check counts
+- overall pass rate
+- validation coverage by area
+- prediction-consistency results
+- valid- and invalid-input tests
+- download validation
+- application-structure checks
+- approved-figure validation
+- all 98 detailed checks with validation-area filtering
+
 ### Guided-form validation
 
 Notebook 09 confirmed:
@@ -1515,11 +1549,11 @@ All CSV payloads were exported and reloaded successfully.
 
 ```text
 Validation steps: 6
-Total checks: 88
-Passed: 88
+Total checks: 98
+Passed: 98
 Failed: 0
 Pass rate: 100.00%
-Pages validated: 7
+Pages validated: 8
 Input methods validated: 3
 Approved figures validated: 22
 ```
@@ -1593,9 +1627,9 @@ This capstone demonstrates a complete, leakage-aware machine-learning lifecycle:
 - global and record-level explainability
 - guided single-record prediction
 - batch CSV prediction
-- professional seven-page Streamlit deployment
+- professional eight-page Streamlit deployment
 - comprehensive application validation
 
-The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, provide consistent predictions across input methods, and validate the complete application through 88 successful checks.
+The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, provide consistent predictions across input methods, and validate the complete application through 98 successful checks.
 
 The deployed system remains an academic decision-support prototype and must not be interpreted as a medical diagnosis or used as the sole basis for patient-care decisions.

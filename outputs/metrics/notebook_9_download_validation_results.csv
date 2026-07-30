@@ -3,6 +3,11 @@ Batch screening download contains expected columns,PASSED
 Single screening download contains expected columns,PASSED
 Single screening result contains 43 predictor values,PASSED
 Factor download contains expected columns,PASSED
+Factor download patient values are readable,PASSED
+Factor download retains original feature names,PASSED
+Factor download probabilities are rounded to four decimals,PASSED
+Age factors use readable year-range labels,PASSED
+Discharge-disposition factors use readable labels,PASSED
 Single download probability matches model output,PASSED
 Batch download probability matches model output,PASSED
 Single download uses the 0.50 standard cutoff,PASSED
