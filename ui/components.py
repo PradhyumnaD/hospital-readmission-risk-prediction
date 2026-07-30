@@ -184,3 +184,149 @@ def render_key_message(
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_screening_status_card(
+    label: str,
+    result: str,
+    *,
+    note: str,
+    tone: str,
+    icon: str,
+) -> None:
+    """Render one user-friendly prediction status card."""
+
+    safe_tone = (
+        tone
+        if tone in {"teal", "green", "amber", "blue"}
+        else "blue"
+    )
+
+    st.markdown(
+        f"""
+        <div class="hr-screening-card hr-screening-{safe_tone}">
+            <div class="hr-screening-card-top">
+                <div class="hr-screening-card-icon">
+                    {escape(icon)}
+                </div>
+                <div class="hr-screening-card-label">
+                    {escape(label)}
+                </div>
+            </div>
+            <div class="hr-screening-card-result">
+                {escape(result)}
+            </div>
+            <div class="hr-screening-card-note">
+                {escape(note)}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_probability_scale(
+    probability_percentage: float,
+    *,
+    additional_cutoff: float = 45.0,
+    standard_cutoff: float = 50.0,
+) -> None:
+    """Render an estimated-risk bar with both validated cutoffs."""
+
+    probability = max(0.0, min(float(probability_percentage), 100.0))
+    additional = max(0.0, min(float(additional_cutoff), 100.0))
+    standard = max(0.0, min(float(standard_cutoff), 100.0))
+
+    html = (
+        '<div class="hr-probability-card">'
+        '<div class="hr-probability-heading">'
+        '<div>'
+        '<div class="hr-probability-label">'
+        'Estimated 30-Day Readmission Risk'
+        '</div>'
+        f'<div class="hr-probability-value">{probability:.2f}%</div>'
+        '</div>'
+        '<div class="hr-probability-note">'
+        'Model-estimated probability'
+        '</div>'
+        '</div>'
+        '<div class="hr-probability-scale">'
+        f'<div class="hr-probability-fill" '
+        f'style="width:{probability:.4f}%;"></div>'
+        f'<div class="hr-cutoff-line hr-cutoff-additional" '
+        f'style="left:{additional:.4f}%;">'
+        '<span>45%</span>'
+        '</div>'
+        f'<div class="hr-cutoff-line hr-cutoff-standard" '
+        f'style="left:{standard:.4f}%;">'
+        '<span>50%</span>'
+        '</div>'
+        f'<div class="hr-probability-marker" '
+        f'style="left:{probability:.4f}%;">'
+        f'<span>{probability:.2f}%</span>'
+        '</div>'
+        '</div>'
+        '<div class="hr-probability-legend">'
+        '<span>'
+        '<i class="hr-legend-dot hr-dot-blue"></i>'
+        'Additional screening cutoff'
+        '</span>'
+        '<span>'
+        '<i class="hr-legend-dot hr-dot-teal"></i>'
+        'Standard review cutoff'
+        '</span>'
+        '</div>'
+        '</div>'
+    )
+
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_factor_panel(
+    title: str,
+    factors: list[tuple[str, str]],
+    *,
+    direction: str,
+) -> None:
+    """Render increasing or reducing record-level factors."""
+
+    safe_direction = (
+        direction
+        if direction in {"increasing", "reducing"}
+        else "increasing"
+    )
+
+    if factors:
+        row_parts = []
+        for index, (feature, value) in enumerate(factors, start=1):
+            row_parts.append(
+                '<div class="hr-factor-row">'
+                f'<div class="hr-factor-rank">{index}</div>'
+                '<div>'
+                f'<div class="hr-factor-name">{escape(str(feature))}</div>'
+                f'<div class="hr-factor-value">{escape(str(value))}</div>'
+                '</div>'
+                '</div>'
+            )
+        rows = "".join(row_parts)
+    else:
+        rows = (
+            '<div class="hr-factor-empty">'
+            'No meaningful factors were identified.'
+            '</div>'
+        )
+
+    icon = "↗" if safe_direction == "increasing" else "↘"
+
+    html = (
+        f'<div class="hr-factor-panel hr-factor-{safe_direction}">'
+        '<div class="hr-factor-panel-heading">'
+        f'<span class="hr-factor-panel-icon">{icon}</span>'
+        f'<span>{escape(title)}</span>'
+        '</div>'
+        f'<div class="hr-factor-list">{rows}</div>'
+        '</div>'
+    )
+
+    st.markdown(html, unsafe_allow_html=True)
+

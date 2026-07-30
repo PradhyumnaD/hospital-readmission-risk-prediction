@@ -27,10 +27,13 @@ from ui.form_config import (
     validate_form_configuration,
 )
 from ui.components import (
+    render_factor_panel,
     render_info_card,
     render_key_message,
     render_metric_card,
     render_page_hero,
+    render_probability_scale,
+    render_screening_status_card,
     render_threshold_card,
     render_three_step_workflow,
 )
@@ -457,7 +460,7 @@ def calculate_single_patient_results(schema: dict) -> None:
 
 
 def render_single_patient_results(schema: dict) -> None:
-    """Display a direct-entry prediction and its strongest factors."""
+    """Display a polished direct-entry prediction result."""
 
     prediction_result = st.session_state.get(
         "single_prediction_result"
@@ -481,41 +484,57 @@ def render_single_patient_results(schema: dict) -> None:
     )
 
     st.divider()
-    st.subheader("30-Day Readmission Screening Result")
+    st.markdown(
+        '<div class="hr-section-title">'
+        '30-Day Readmission Screening Result'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
-    result_col1, result_col2, result_col3 = st.columns(3)
+    result_col1, result_col2 = st.columns(2)
 
     with result_col1:
-        st.metric(
-            "Estimated 30-Day Readmission Risk",
-            f"{probability_percentage:.2f}%",
+        render_screening_status_card(
+            "Standard Review Result",
+            (
+                "Review Recommended"
+                if standard_flagged
+                else "Standard Review Not Triggered"
+            ),
+            note=(
+                "Uses the finalized 50% standard-review cutoff."
+            ),
+            tone="amber" if standard_flagged else "green",
+            icon="!" if standard_flagged else "✓",
         )
 
     with result_col2:
-        st.markdown("**Standard Review Result**")
-        if standard_flagged:
-            st.warning("Review Recommended")
-        else:
-            st.success("Standard Review Not Triggered")
+        render_screening_status_card(
+            "Additional Screening Result",
+            (
+                "Additional Screening Recommended"
+                if additional_flagged
+                else "No Additional Screening Flag"
+            ),
+            note=(
+                "Uses the lower 45% recall-focused screening cutoff."
+            ),
+            tone="blue" if additional_flagged else "green",
+            icon="+" if additional_flagged else "✓",
+        )
 
-    with result_col3:
-        st.markdown("**Additional Screening Result**")
-        if additional_flagged:
-            st.warning("Additional Screening Recommended")
-        else:
-            st.success("No Additional Screening Flag")
-
-    st.markdown("#### Estimated Probability")
-    st.progress(
-        min(max(probability_percentage / 100, 0.0), 1.0),
-        text=f"{probability_percentage:.2f}%",
-    )
-    st.caption(
-        "Additional screening cutoff: 45% · "
-        "Standard review cutoff: 50%"
+    render_probability_scale(
+        probability_percentage,
+        additional_cutoff=45.0,
+        standard_cutoff=50.0,
     )
 
-    st.markdown("#### Why the Model Produced This Result")
+    st.markdown(
+        '<div class="hr-section-title">'
+        'Why the Model Produced This Result'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.caption(
         "These factors explain the model calculation for this record. "
         "They do not prove that a factor caused or prevented readmission."
@@ -531,43 +550,55 @@ def render_single_patient_results(schema: dict) -> None:
         == "Reduces estimated readmission risk"
     ].sort_values("Factor Rank")
 
+    increasing_items = []
+    for _, factor in increasing_factors.iterrows():
+        feature = factor["Original Feature"]
+        value = readable_form_value(
+            feature,
+            factor["Patient Value"],
+            schema,
+        )
+        increasing_items.append(
+            (str(factor["Feature"]), value)
+        )
+
+    reducing_items = []
+    for _, factor in reducing_factors.iterrows():
+        feature = factor["Original Feature"]
+        value = readable_form_value(
+            feature,
+            factor["Patient Value"],
+            schema,
+        )
+        reducing_items.append(
+            (str(factor["Feature"]), value)
+        )
+
     factor_col1, factor_col2 = st.columns(2)
 
     with factor_col1:
-        st.markdown("##### Factors increasing the estimated risk")
-        if increasing_factors.empty:
-            st.write("No meaningful increasing factors were identified.")
-        else:
-            for _, factor in increasing_factors.iterrows():
-                feature = factor["Original Feature"]
-                value = readable_form_value(
-                    feature,
-                    factor["Patient Value"],
-                    schema,
-                )
-                st.markdown(
-                    f"- **{factor['Feature']}**: {value}"
-                )
+        render_factor_panel(
+            "Factors increasing the estimated risk",
+            increasing_items,
+            direction="increasing",
+        )
 
     with factor_col2:
-        st.markdown("##### Factors reducing the estimated risk")
-        if reducing_factors.empty:
-            st.write("No meaningful reducing factors were identified.")
-        else:
-            for _, factor in reducing_factors.iterrows():
-                feature = factor["Original Feature"]
-                value = readable_form_value(
-                    feature,
-                    factor["Patient Value"],
-                    schema,
-                )
-                st.markdown(
-                    f"- **{factor['Feature']}**: {value}"
-                )
+        render_factor_panel(
+            "Factors reducing the estimated risk",
+            reducing_items,
+            direction="reducing",
+        )
 
-    st.info(
-        "A factor can influence another record differently because the "
-        "prediction depends on all entered values and their interactions."
+    render_key_message(
+        "Interpret factors in context",
+        (
+            "A factor can influence another record differently because "
+            "the prediction depends on all entered values and their "
+            "interactions."
+        ),
+        icon="i",
+        tone="blue",
     )
 
     download_col1, download_col2 = st.columns(2)
@@ -2643,16 +2674,37 @@ def render_batch_prediction() -> None:
         ].mean()
 
         col1, col2, col3, col4 = st.columns(4)
+
         with col1:
-            st.metric("Records Reviewed", f"{total_records:,}")
+            render_metric_card(
+                "Records Reviewed",
+                f"{total_records:,}",
+                note="Validated uploaded encounters",
+                icon="▦",
+            )
+
         with col2:
-            st.metric("Standard Review Flags", f"{main_high_risk_count:,}")
+            render_metric_card(
+                "Standard Review Flags",
+                f"{main_high_risk_count:,}",
+                note="Probability at or above 50%",
+                icon="!",
+            )
+
         with col3:
-            st.metric("Additional Screening Flags", f"{recall_flagged_count:,}")
+            render_metric_card(
+                "Additional Screening Flags",
+                f"{recall_flagged_count:,}",
+                note="Probability at or above 45%",
+                icon="+",
+            )
+
         with col4:
-            st.metric(
-                "Average Estimated Readmission Risk",
+            render_metric_card(
+                "Average Estimated Risk",
                 f"{average_probability:.2f}%",
+                note="Mean across uploaded records",
+                icon="◎",
             )
 
         display_results = create_user_friendly_screening_results(
@@ -2741,40 +2793,61 @@ def render_batch_prediction() -> None:
                 == selected_record_number
             ].copy()
 
-            explanation_col1, explanation_col2, explanation_col3 = (
-                st.columns(3)
+            selected_probability = float(
+                selected_prediction["Readmission Probability (%)"]
             )
+            selected_standard_flagged = (
+                selected_prediction["Main Classification"]
+                == "Flagged at Main Threshold"
+            )
+            selected_additional_flagged = (
+                selected_prediction[
+                    "Recall-Focused Classification"
+                ]
+                == "Flagged for Screening"
+            )
+
+            explanation_col1, explanation_col2 = st.columns(2)
+
             with explanation_col1:
-                st.metric(
-                    "Estimated 30-Day Readmission Risk",
+                render_screening_status_card(
+                    "Standard Review Result",
                     (
-                        f"{selected_prediction['Readmission Probability (%)']:.2f}%"
+                        "Review Recommended"
+                        if selected_standard_flagged
+                        else "Standard Review Not Triggered"
                     ),
+                    note="Uses the finalized 50% cutoff.",
+                    tone=(
+                        "amber"
+                        if selected_standard_flagged
+                        else "green"
+                    ),
+                    icon="!" if selected_standard_flagged else "✓",
                 )
 
             with explanation_col2:
-                st.markdown("**Standard Review Result**")
+                render_screening_status_card(
+                    "Additional Screening Result",
+                    (
+                        "Additional Screening Recommended"
+                        if selected_additional_flagged
+                        else "No Additional Screening Flag"
+                    ),
+                    note="Uses the lower 45% cutoff.",
+                    tone=(
+                        "blue"
+                        if selected_additional_flagged
+                        else "green"
+                    ),
+                    icon="+" if selected_additional_flagged else "✓",
+                )
 
-                if (
-                    selected_prediction["Main Classification"]
-                    == "Flagged at Main Threshold"
-                ):
-                    st.warning("Review Recommended")
-                else:
-                    st.success("Standard Review Not Triggered")
-
-            with explanation_col3:
-                st.markdown("**Additional Screening Result**")
-
-                if (
-                    selected_prediction[
-                        "Recall-Focused Classification"
-                    ]
-                    == "Flagged for Screening"
-                ):
-                    st.warning("Additional Screening Recommended")
-                else:
-                    st.success("No Additional Screening Flag")
+            render_probability_scale(
+                selected_probability,
+                additional_cutoff=45.0,
+                standard_cutoff=50.0,
+            )
 
             increasing_factors = selected_explanation[
                 selected_explanation["Direction"]
@@ -2786,50 +2859,53 @@ def render_batch_prediction() -> None:
                 == "Reduces estimated readmission risk"
             ].sort_values("Factor Rank")
 
+            increasing_items = [
+                (
+                    str(factor["Feature"]),
+                    format_patient_value(
+                        factor["Original Feature"],
+                        factor["Patient Value"],
+                    ),
+                )
+                for _, factor in increasing_factors.iterrows()
+            ]
+
+            reducing_items = [
+                (
+                    str(factor["Feature"]),
+                    format_patient_value(
+                        factor["Original Feature"],
+                        factor["Patient Value"],
+                    ),
+                )
+                for _, factor in reducing_factors.iterrows()
+            ]
+
             factors_col1, factors_col2 = st.columns(2)
 
             with factors_col1:
-                st.markdown(
-                    "#### Factors increasing the estimated risk"
+                render_factor_panel(
+                    "Factors increasing the estimated risk",
+                    increasing_items,
+                    direction="increasing",
                 )
-                if increasing_factors.empty:
-                    st.write(
-                        "No meaningful increasing factors were identified."
-                    )
-                else:
-                    for _, factor in increasing_factors.iterrows():
-                        readable_value = format_patient_value(
-                            factor["Original Feature"],
-                            factor["Patient Value"],
-                        )
-                        st.markdown(
-                            f"- **{factor['Feature']}**: "
-                            f"{readable_value}"
-                        )
 
             with factors_col2:
-                st.markdown(
-                    "#### Factors reducing the estimated risk"
+                render_factor_panel(
+                    "Factors reducing the estimated risk",
+                    reducing_items,
+                    direction="reducing",
                 )
-                if reducing_factors.empty:
-                    st.write(
-                        "No meaningful reducing factors were identified."
-                    )
-                else:
-                    for _, factor in reducing_factors.iterrows():
-                        readable_value = format_patient_value(
-                            factor["Original Feature"],
-                            factor["Patient Value"],
-                        )
-                        st.markdown(
-                            f"- **{factor['Feature']}**: "
-                            f"{readable_value}"
-                        )
 
-            st.info(
-                "A factor can influence the model differently for another "
-                "record because the prediction depends on all entered values "
-                "and their interactions."
+            render_key_message(
+                "Interpret factors in context",
+                (
+                    "A factor can influence another record differently "
+                    "because the prediction depends on all entered values "
+                    "and their interactions."
+                ),
+                icon="i",
+                tone="blue",
             )
 
         download_col1, download_col2 = st.columns(2)

@@ -596,6 +596,340 @@ def apply_global_styles() -> None:
             border-color: rgba(255, 255, 255, 0.14);
         }
 
+
+        /* ---------------------------------------------------------
+           Prediction-result presentation
+           --------------------------------------------------------- */
+        .hr-screening-card {
+            height: 100%;
+            min-height: 10.2rem;
+            border: 1px solid var(--hr-border);
+            border-radius: 1rem;
+            padding: 1rem 1.05rem;
+            background: var(--hr-surface);
+            box-shadow: var(--hr-shadow);
+        }
+
+        .hr-screening-card-top {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .hr-screening-card-icon {
+            display: grid;
+            place-items: center;
+            width: 2.15rem;
+            height: 2.15rem;
+            border-radius: 0.72rem;
+            font-weight: 850;
+        }
+
+        .hr-screening-card-label {
+            color: var(--hr-muted);
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .hr-screening-card-result {
+            color: var(--hr-text);
+            font-size: 1.12rem;
+            line-height: 1.35;
+            font-weight: 850;
+            margin-top: 0.85rem;
+        }
+
+        .hr-screening-card-note {
+            color: var(--hr-muted);
+            font-size: 0.73rem;
+            line-height: 1.45;
+            margin-top: 0.45rem;
+        }
+
+        .hr-screening-green {
+            border-top: 4px solid var(--hr-green);
+        }
+
+        .hr-screening-green .hr-screening-card-icon {
+            background: #E8F6EF;
+            color: var(--hr-green);
+        }
+
+        .hr-screening-amber {
+            border-top: 4px solid var(--hr-amber);
+        }
+
+        .hr-screening-amber .hr-screening-card-icon {
+            background: var(--hr-soft-amber);
+            color: var(--hr-amber);
+        }
+
+        .hr-screening-teal {
+            border-top: 4px solid var(--hr-teal);
+        }
+
+        .hr-screening-teal .hr-screening-card-icon {
+            background: var(--hr-soft-teal);
+            color: var(--hr-teal-dark);
+        }
+
+        .hr-screening-blue {
+            border-top: 4px solid var(--hr-blue);
+        }
+
+        .hr-screening-blue .hr-screening-card-icon {
+            background: var(--hr-soft-blue);
+            color: var(--hr-blue);
+        }
+
+        .hr-probability-card {
+            border: 1px solid var(--hr-border);
+            border-radius: 1rem;
+            padding: 1.15rem 1.2rem 1.05rem 1.2rem;
+            margin: 1rem 0 1.2rem 0;
+            background: var(--hr-surface);
+            box-shadow: var(--hr-shadow);
+        }
+
+        .hr-probability-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .hr-probability-label {
+            color: var(--hr-muted);
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .hr-probability-value {
+            color: var(--hr-text);
+            font-size: 2rem;
+            line-height: 1.1;
+            font-weight: 900;
+            margin-top: 0.25rem;
+        }
+
+        .hr-probability-note {
+            color: var(--hr-muted);
+            font-size: 0.72rem;
+            padding-top: 0.25rem;
+        }
+
+        .hr-probability-scale {
+            position: relative;
+            height: 1rem;
+            border-radius: 999px;
+            margin: 2.55rem 0 2.65rem 0;
+            background:
+                linear-gradient(
+                    90deg,
+                    #DCE8F7 0%,
+                    #DCE8F7 45%,
+                    #FFF0C9 45%,
+                    #FFF0C9 50%,
+                    #DDF3EC 50%,
+                    #DDF3EC 100%
+                );
+            overflow: visible;
+        }
+
+        .hr-probability-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            border-radius: 999px;
+            background:
+                linear-gradient(90deg, #2878D0, #0F8F8D);
+            opacity: 0.88;
+        }
+
+        .hr-cutoff-line {
+            position: absolute;
+            top: -0.45rem;
+            width: 2px;
+            height: 1.9rem;
+            transform: translateX(-1px);
+        }
+
+        .hr-cutoff-line span {
+            position: absolute;
+            top: 2.05rem;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            color: var(--hr-muted);
+            font-size: 0.67rem;
+            font-weight: 750;
+        }
+
+        .hr-cutoff-additional {
+            background: var(--hr-blue);
+        }
+
+        .hr-cutoff-standard {
+            background: var(--hr-teal);
+        }
+
+        .hr-probability-marker {
+            position: absolute;
+            top: 50%;
+            width: 1.15rem;
+            height: 1.15rem;
+            border: 3px solid white;
+            border-radius: 50%;
+            background: var(--hr-text);
+            box-shadow: 0 3px 10px rgba(16, 35, 63, 0.24);
+            transform: translate(-50%, -50%);
+        }
+
+        .hr-probability-marker span {
+            position: absolute;
+            bottom: 1.45rem;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            border-radius: 0.45rem;
+            padding: 0.25rem 0.42rem;
+            background: var(--hr-text);
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 800;
+        }
+
+        .hr-probability-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            color: var(--hr-muted);
+            font-size: 0.7rem;
+        }
+
+        .hr-legend-dot {
+            display: inline-block;
+            width: 0.52rem;
+            height: 0.52rem;
+            border-radius: 50%;
+            margin-right: 0.32rem;
+        }
+
+        .hr-dot-blue {
+            background: var(--hr-blue);
+        }
+
+        .hr-dot-teal {
+            background: var(--hr-teal);
+        }
+
+        .hr-factor-panel {
+            height: 100%;
+            min-height: 23rem;
+            border: 1px solid var(--hr-border);
+            border-radius: 1rem;
+            padding: 1rem 1.05rem;
+            background: var(--hr-surface);
+            box-shadow: var(--hr-shadow);
+        }
+
+        .hr-factor-increasing {
+            border-top: 4px solid var(--hr-amber);
+        }
+
+        .hr-factor-reducing {
+            border-top: 4px solid var(--hr-green);
+        }
+
+        .hr-factor-panel-heading {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            color: var(--hr-text);
+            font-size: 0.95rem;
+            font-weight: 850;
+            margin-bottom: 0.9rem;
+        }
+
+        .hr-factor-panel-icon {
+            display: grid;
+            place-items: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.65rem;
+            background: #F5F7FA;
+            font-weight: 900;
+        }
+
+        .hr-factor-increasing .hr-factor-panel-icon {
+            color: var(--hr-amber);
+            background: var(--hr-soft-amber);
+        }
+
+        .hr-factor-reducing .hr-factor-panel-icon {
+            color: var(--hr-green);
+            background: #E8F6EF;
+        }
+
+        .hr-factor-list {
+            display: grid;
+            gap: 0.58rem;
+        }
+
+        .hr-factor-row {
+            display: grid;
+            grid-template-columns: 1.8rem 1fr;
+            gap: 0.65rem;
+            align-items: center;
+            border: 1px solid var(--hr-border);
+            border-radius: 0.72rem;
+            padding: 0.65rem 0.7rem;
+            background: #FBFCFE;
+        }
+
+        .hr-factor-rank {
+            display: grid;
+            place-items: center;
+            width: 1.65rem;
+            height: 1.65rem;
+            border-radius: 50%;
+            background: #EEF3F8;
+            color: var(--hr-text);
+            font-size: 0.7rem;
+            font-weight: 850;
+        }
+
+        .hr-factor-name {
+            color: var(--hr-text);
+            font-size: 0.79rem;
+            font-weight: 800;
+        }
+
+        .hr-factor-value {
+            color: var(--hr-muted);
+            font-size: 0.72rem;
+            margin-top: 0.12rem;
+        }
+
+        .hr-factor-empty {
+            color: var(--hr-muted);
+            font-size: 0.8rem;
+            padding: 0.8rem;
+        }
+
+        @media (max-width: 900px) {
+            .hr-probability-heading {
+                display: block;
+            }
+
+            .hr-probability-note {
+                margin-top: 0.4rem;
+            }
+
+            .hr-factor-panel {
+                min-height: auto;
+            }
+        }
+
         </style>
         """,
         unsafe_allow_html=True,
