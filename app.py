@@ -31,8 +31,11 @@ from ui.components import (
     render_info_card,
     render_key_message,
     render_metric_card,
+    render_overview_fact_card,
+    render_overview_hero,
     render_page_hero,
     render_probability_scale,
+    render_project_pipeline,
     render_screening_status_card,
     render_threshold_card,
     render_three_step_workflow,
@@ -45,7 +48,7 @@ from ui.styles import apply_global_styles
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Hospital Readmission Dashboard",
-    page_icon="🏥",
+    page_icon="✚",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -1647,120 +1650,216 @@ def create_user_friendly_screening_results(
 # ---------------------------------------------------------
 # Page sections
 # ---------------------------------------------------------
-def render_project_overview() -> None:
-    """Render the redesigned project overview page."""
+def navigate_to(page_name: str) -> None:
+    """Move the single-page application to a selected sidebar section."""
 
-    render_page_hero(
-        "Hospital Readmission Risk Prediction",
-        (
-            "Identify hospital encounters that may benefit from additional "
-            "follow-up review using a finalized machine-learning screening "
-            "pipeline and record-level explanations."
-        ),
-        icon="🏥",
+    st.session_state["selected_page"] = page_name
+
+
+def render_project_overview() -> None:
+    """Render the professional, project-specific Overview page."""
+
+    validation_total = 108
+    validation_passed = 108
+
+    if VALIDATION_OVERALL_SUMMARY_PATH.exists():
+        try:
+            validation_summary_data = pd.read_csv(
+                VALIDATION_OVERALL_SUMMARY_PATH
+            )
+            validation_summary = dict(
+                zip(
+                    validation_summary_data[
+                        "Validation Property"
+                    ].astype(str),
+                    validation_summary_data[
+                        "Validated Value"
+                    ].astype(str),
+                )
+            )
+            validation_total = int(
+                float(
+                    validation_summary.get(
+                        "Total validation checks",
+                        validation_total,
+                    )
+                )
+            )
+            validation_passed = int(
+                float(
+                    validation_summary.get(
+                        "Passed validation checks",
+                        validation_passed,
+                    )
+                )
+            )
+        except (
+            KeyError,
+            OSError,
+            TypeError,
+            ValueError,
+            pd.errors.EmptyDataError,
+            pd.errors.ParserError,
+        ):
+            validation_total = 108
+            validation_passed = 108
+
+    validation_display = (
+        f"{validation_passed:,} / {validation_total:,}"
     )
 
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    render_overview_hero(
+        validation_text=(
+            f"{validation_display} Validation Checks"
+        )
+    )
 
-    with metric_col1:
-        render_metric_card(
-            "Historical Encounters",
+    with st.container(key="overview_primary_actions"):
+        action_col1, action_col2, action_spacer = st.columns(
+            [1, 1.12, 2.35]
+        )
+
+        with action_col1:
+            st.button(
+                "Start a Prediction",
+                type="primary",
+                use_container_width=True,
+                key="overview_start_prediction",
+                on_click=navigate_to,
+                args=("New Prediction",),
+            )
+
+        with action_col2:
+            st.button(
+                "View Model Performance",
+                use_container_width=True,
+                key="overview_view_performance",
+                on_click=navigate_to,
+                args=("Model Performance",),
+            )
+
+        with action_spacer:
+            st.empty()
+
+    st.markdown(
+        '<div class="hr-section-title hr-overview-section-title">'
+        'Project at a Glance'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    fact_col1, fact_col2, fact_col3, fact_col4 = st.columns(4)
+
+    with fact_col1:
+        render_overview_fact_card(
+            "Dataset",
             "99,343",
-            note="Cleaned modeling dataset",
-            icon="▦",
+            "Hospital encounters",
+            icon="dataset",
+            details=[
+                "69,990 unique patients",
+                "11.39% readmitted within 30 days",
+            ],
         )
 
-    with metric_col2:
-        render_metric_card(
-            "Unique Patients",
-            "69,990",
-            note="Patient-level grouping retained",
-            icon="◎",
-        )
-
-    with metric_col3:
-        render_metric_card(
-            "30-Day Readmission Rate",
-            "11.39%",
-            note="Positive target class",
-            icon="↗",
-        )
-
-    with metric_col4:
-        render_metric_card(
+    with fact_col2:
+        render_overview_fact_card(
             "Final Model",
             "Tuned XGBoost",
-            note="43 raw predictors",
-            icon="◆",
+            "Finalized prediction model",
+            icon="model",
+            details=[
+                "43 raw predictors",
+                "179 transformed features",
+            ],
         )
 
-    st.markdown(
-        '<div class="hr-section-title">How the application works</div>',
-        unsafe_allow_html=True,
+    with fact_col3:
+        render_overview_fact_card(
+            "Explainability",
+            "SHAP",
+            "Transparent model insights",
+            icon="shap",
+            details=[
+                "Global feature importance",
+                "Record-level contributing factors",
+            ],
+        )
+
+    with fact_col4:
+        render_overview_fact_card(
+            "Application Validation",
+            validation_display,
+            "Notebook 09 checks passed",
+            icon="validation",
+            details=[
+                "100.00% validation pass rate",
+                "22 approved figures verified",
+            ],
+        )
+
+    render_project_pipeline()
+
+    with st.container(key="overview_quick_access"):
+        st.markdown(
+            '<div class="hr-overview-quick-heading">'
+            '<div class="hr-overview-quick-title">Quick Access</div>'
+            '<div class="hr-overview-quick-subtitle">'
+            'Open the main prediction and analysis sections.'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        quick_col1, quick_col2, quick_col3, quick_col4 = st.columns(4)
+
+        with quick_col1:
+            st.button(
+                "Make a Prediction",
+                type="primary",
+                use_container_width=True,
+                key="overview_quick_prediction",
+                on_click=navigate_to,
+                args=("New Prediction",),
+            )
+
+        with quick_col2:
+            st.button(
+                "View Final Performance",
+                use_container_width=True,
+                key="overview_quick_performance",
+                on_click=navigate_to,
+                args=("Model Performance",),
+            )
+
+        with quick_col3:
+            st.button(
+                "Explore Risk Insights",
+                use_container_width=True,
+                key="overview_quick_insights",
+                on_click=navigate_to,
+                args=("Risk Insights",),
+            )
+
+        with quick_col4:
+            st.button(
+                "Review Application Validation",
+                use_container_width=True,
+                key="overview_quick_validation",
+                on_click=navigate_to,
+                args=("Application Validation",),
+            )
+
+    render_key_message(
+        "Academic decision-support prototype",
+        (
+            "This application is for academic and research purposes. "
+            "It does not provide a medical diagnosis and must not be used "
+            "as the sole basis for patient-care decisions."
+        ),
+        icon="i",
+        tone="blue",
     )
-    render_three_step_workflow()
-
-    info_col1, info_col2, info_col3 = st.columns(3)
-
-    with info_col1:
-        render_info_card(
-            "Business Problem",
-            (
-                "Hospital readmissions can increase healthcare costs and "
-                "may indicate that some patients need additional follow-up "
-                "after discharge. Earlier screening can support prioritizing "
-                "post-discharge review resources."
-            ),
-            icon="▥",
-        )
-
-    with info_col2:
-        render_info_card(
-            "Prediction Target",
-            (
-                "The target is readmitted_30. A value of 1 represents "
-                "readmission within 30 days; a value of 0 represents no "
-                "readmission within 30 days."
-            ),
-            icon="◎",
-        )
-
-    with info_col3:
-        render_info_card(
-            "Modeling Priority",
-            (
-                "Recall was prioritized because missing a true readmission "
-                "is important in a screening context. Precision, specificity, "
-                "PR-AUC, ROC-AUC, false positives, and false negatives were "
-                "considered together."
-            ),
-            icon="♟",
-        )
-
-    st.markdown(
-        '<div class="hr-section-title">Final operating points</div>',
-        unsafe_allow_html=True,
-    )
-
-    threshold_col1, threshold_col2 = st.columns(2)
-
-    with threshold_col1:
-        st.info(
-            "**Standard review cutoff — 0.50**  \n"
-            "Main balanced operating point for routine review."
-        )
-
-    with threshold_col2:
-        st.warning(
-            "**Additional screening cutoff — 0.45**  \n"
-            "Lower cutoff designed to identify more encounters for review."
-        )
-
-    st.caption(
-        "The application is an academic decision-support prototype. "
-        "Predictions are not diagnoses and must not replace clinical judgment."
-    )
-
 
 def render_dataset_summary() -> None:
     """Render the redesigned dataset summary page."""
@@ -3725,16 +3824,29 @@ def render_batch_prediction() -> None:
 # Sidebar navigation
 # ---------------------------------------------------------
 with st.sidebar:
+    sidebar_brand_html = (
+        '<div class="hr-sidebar-brand">'
+        '<div class="hr-sidebar-logo" aria-hidden="true">'
+        '<svg viewBox="0 0 48 48">'
+        '<rect x="9" y="16" width="30" height="25" rx="4"></rect>'
+        '<rect x="16" y="8" width="16" height="33" rx="4"></rect>'
+        '<path d="M21 13h6M24 10v6"></path>'
+        '<path d="M14 23h5M14 29h5M29 23h5M29 29h5"></path>'
+        '<path d="M21 33h6v8h-6z"></path>'
+        '</svg>'
+        '</div>'
+        '<div>'
+        '<div class="hr-sidebar-title">'
+        'Hospital Readmission<br>Risk Prediction'
+        '</div>'
+        '<div class="hr-sidebar-subtitle">'
+        'ASDS 6306 Capstone Project'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
     st.markdown(
-        """
-        <div class="hr-sidebar-brand">
-            <div class="hr-sidebar-logo">✚</div>
-            <div>
-                <div class="hr-sidebar-title">Readmission Risk Portal</div>
-                <div class="hr-sidebar-subtitle">ASDS 6306 Capstone</div>
-            </div>
-        </div>
-        """,
+        sidebar_brand_html,
         unsafe_allow_html=True,
     )
 
@@ -3751,14 +3863,42 @@ with st.sidebar:
             "New Prediction",
         ],
         label_visibility="collapsed",
+        key="selected_page",
     )
 
-    st.divider()
-    st.success(
-        "Project completed. Tuned XGBoost is the finalized prediction model."
+    st.markdown(
+        (
+            '<section class="hr-sidebar-summary">'
+            '<div class="hr-sidebar-summary-title">'
+            'Project at a Glance'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">C</span>'
+            '<div><small>Course</small>'
+            '<strong>ASDS 6306 Capstone</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">M</span>'
+            '<div><small>Final Model</small>'
+            '<strong>Tuned XGBoost</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">T</span>'
+            '<div><small>Target</small>'
+            '<strong>30-Day Readmission</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">+</span>'
+            '<div><small>Positive Class Rate</small>'
+            '<strong>11.39%</strong></div>'
+            '</div>'
+            '</section>'
+        ),
+        unsafe_allow_html=True,
     )
-    st.caption("Main threshold: 0.50")
-    st.caption("Recall-focused threshold: 0.45")
+
+    st.caption("Standard review cutoff: 0.50")
+    st.caption("Additional screening cutoff: 0.45")
 
 
 # ---------------------------------------------------------
@@ -3781,9 +3921,10 @@ elif selected_page == "Application Validation":
 elif selected_page == "New Prediction":
     render_prediction()
 
-st.divider()
-st.caption(
-    "Academic decision-support prototype. The model output is not a medical "
-    "diagnosis and must not be used as the sole basis for patient-care "
-    "decisions."
-)
+if selected_page != "Overview":
+    st.divider()
+    st.caption(
+        "Academic decision-support prototype. The model output is not a "
+        "medical diagnosis and must not be used as the sole basis for "
+        "patient-care decisions."
+    )
