@@ -49,7 +49,7 @@ A complete machine-learning capstone project for estimating the probability of *
 **Prediction point:** At or near hospital discharge  
 **Prediction target:** Readmission within 30 days  
 **Final model:** Tuned XGBoost  
-**Application:** Eight-page Streamlit dashboard with guided direct entry, batch CSV upload, synthetic sample workflows, and a formal application-validation dashboard  
+**Application:** Eight-page Streamlit dashboard with a redesigned professional Overview page, guided direct entry, batch CSV upload, synthetic sample workflows, and a formal application-validation dashboard  
 **Explainability:** Global grouped SHAP analysis and dynamic record-level prediction explanations  
 **Deployed application:** [Hospital Readmission Risk Prediction](https://hospital-readmission-risk-prediction.streamlit.app/)
 
@@ -79,7 +79,7 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
 | Batch CSV workflow | Completed |
 | Synthetic sample workflow | Completed |
 | Dynamic record-level explanations | Completed |
-| Comprehensive application validation | Completed — 98 of 98 checks passed |
+| Comprehensive application validation | Completed — 108 of 108 checks passed |
 | Streamlit Community Cloud deployment | Completed |
 | GitHub repository | Completed |
 
@@ -106,6 +106,11 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
   - produced **1,624 additional false-positive alerts**
 - Streamlit interface:
   - **8 pages**
+  - redesigned professional Overview page
+  - hospital and analytics illustration
+  - four factual project-summary cards
+  - five-stage project pipeline
+  - six working Overview navigation actions
   - **3 input methods**
   - **5-step guided form**
   - explicit confirmation before prediction
@@ -113,8 +118,8 @@ The project does not optimize for accuracy alone. Because only about 11% of enco
   - readable downloadable screening and factor files
   - dedicated Application Validation dashboard
 - Notebook 09 application validation:
-  - **98 checks**
-  - **98 passed**
+  - **108 checks**
+  - **108 passed**
   - **0 failed**
   - **100.00% pass rate**
   - **22 approved figures found**
@@ -628,10 +633,55 @@ The final sidebar contains eight pages:
 7. **Saved Figures**
 8. **New Prediction**
 
+### Professional Overview page
+
+The Overview page was redesigned to present the finalized project in a clearer, more professional format. It now includes:
+
+- a large healthcare-themed hero section
+- an embedded hospital and analytics illustration
+- the project title, academic capstone identity, and responsible-use wording
+- direct actions for starting a prediction and viewing final model performance
+- four factual project cards:
+  - 99,343 hospital encounters
+  - Tuned XGBoost
+  - SHAP explainability
+  - 108 of 108 validation checks passed
+- a five-stage project pipeline:
+  - data preparation
+  - patient-level splitting
+  - model development
+  - dual thresholds
+  - risk prediction and SHAP explanation
+- horizontal Quick Access actions for:
+  - New Prediction
+  - Model Performance
+  - Risk Insights
+  - Application Validation
+- updated sidebar branding and project-at-a-glance details
+- responsive styling for smaller screens
+
+The Overview values are based on saved project outputs. The validation count is loaded from the saved Notebook 09 summary rather than being fixed to an outdated value.
+
+### Overview implementation fixes
+
+The final interface update also corrected:
+
+- raw SVG and HTML appearing as visible text
+- Markdown code-block rendering inside project cards and the pipeline
+- duplicated Overview disclaimer text
+- outdated 98-of-98 validation text
+- inconsistent spacing and alignment in the hero, cards, pipeline, and Quick Access section
+- Overview navigation buttons so they open the correct existing application pages
+
+The model, preprocessing pipeline, thresholds, prediction service, SHAP logic, downloads, and remaining seven pages were not retrained or functionally changed by the visual redesign.
+
 ### Main application features
 
 - Professional light interface with a navy sidebar
 - Responsive page heroes, metric cards, information cards, and threshold cards
+- Professional Overview hero with embedded hospital illustration
+- Factual project-summary cards and five-stage pipeline
+- Working Overview navigation and Quick Access actions
 - Cleaned-dataset summary and target-class visualization
 - Development-stage model comparison
 - Final untouched test-set results
@@ -886,7 +936,7 @@ notebooks/09_streamlit_application_validation.ipynb
 The completed notebook reports:
 
 ```text
-98 checks passed
+108 checks passed
 0 checks failed
 100.00% pass rate
 8 application pages validated
@@ -916,7 +966,7 @@ Before deployment:
 2. Confirm that the final model and preprocessor are committed and available through Git or Git LFS.
 3. Confirm that the application assets, CSV files, JSON files, metrics, and figures are present.
 4. Run the Python syntax checks.
-5. Run Notebook 09 and confirm 98 of 98 checks pass.
+5. Run Notebook 09 and confirm 108 of 108 checks pass.
 6. Push the final repository to GitHub.
 
 ### Community Cloud setup
@@ -1352,8 +1402,8 @@ Validate the finalized Streamlit application without retraining the model or cha
 
 ```text
 Validation steps completed: 6
-Total validation checks: 98
-Passed validation checks: 98
+Total validation checks: 108
+Passed validation checks: 108
 Failed validation checks: 0
 Overall pass rate: 100.00%
 Application pages: 8
@@ -1370,7 +1420,7 @@ Guided Form Configuration: 18 of 18 passed
 Prediction Parity: 7 of 7 passed
 Invalid-Input Handling: 18 of 18 passed
 Downloadable Outputs: 28 of 28 passed
-Application Structure: 15 of 15 passed
+Application Structure: 25 of 25 passed
 ```
 
 ### Main outputs
@@ -1388,7 +1438,7 @@ outputs/metrics/notebook_9_approved_figure_validation.csv
 
 ### Main conclusion
 
-The finalized application passed all structural, prediction, explanation, input-validation, download, theme, validation-dashboard, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values. The updated checks also confirmed the eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
+The finalized application passed all structural, prediction, explanation, input-validation, download, theme, validation-dashboard, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values. The refreshed checks also confirmed the professional Overview hero, factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
 
 </details>
 
@@ -1493,7 +1543,7 @@ The eighth application page reads the saved Notebook 09 evidence files and displ
 - download validation
 - application-structure checks
 - approved-figure validation
-- all 98 detailed checks with validation-area filtering
+- all 108 detailed checks with validation-area filtering
 
 ### Guided-form validation
 
@@ -1549,8 +1599,8 @@ All CSV payloads were exported and reloaded successfully.
 
 ```text
 Validation steps: 6
-Total checks: 98
-Passed: 98
+Total checks: 108
+Passed: 108
 Failed: 0
 Pass rate: 100.00%
 Pages validated: 8
@@ -1630,6 +1680,6 @@ This capstone demonstrates a complete, leakage-aware machine-learning lifecycle:
 - professional eight-page Streamlit deployment
 - comprehensive application validation
 
-The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, provide consistent predictions across input methods, and validate the complete application through 98 successful checks.
+The final Tuned XGBoost model provides moderate but meaningful predictive signal. The project’s strongest contribution is not a single accuracy value; it is the disciplined methodology used to protect the test set, prevent patient-level leakage, quantify threshold trade-offs, explain model behavior, provide consistent predictions across input methods, and validate the complete application through 108 successful checks.
 
 The deployed system remains an academic decision-support prototype and must not be interpreted as a medical diagnosis or used as the sole basis for patient-care decisions.
