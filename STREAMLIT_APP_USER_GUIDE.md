@@ -71,6 +71,12 @@ Shows:
 
 Displays baseline, candidate, tuned, and threshold-analysis configurations evaluated before the final untouched test assessment.
 
+The page tabs are presented in this order:
+
+1. **Modeling Notes**
+2. **Key Metrics**
+3. **Confusion Counts**
+
 Use this page to compare:
 
 - accuracy
@@ -125,12 +131,20 @@ Displays the saved Notebook 09 quality-assurance evidence:
 - download-validation results
 - application-structure checks
 - professional Overview checks
-- approved-figure checks
-- all 108 detailed checks with filtering by validation area
+- approved-figure checks using readable figure names
+- a permanently visible, scrollable checklist of all 108 checks
+- a validation-area filter for reviewing one area or all checks
+- consistent status labels:
+  - `✅ PASSED`
+  - `❌ FAILED`
+
+The page does not display internal notebook, CSV, JSON, dataset, or figure paths.
 
 ### Saved Figures
 
 Select an analysis stage and figure from the dropdown menus. The validated application contains 22 approved figures and no missing files.
+
+The page shows user-friendly figure names grouped by analysis stage. Internal `.png` filenames and repository paths are not displayed in the public interface.
 
 ### New Prediction
 
@@ -336,7 +350,7 @@ For each explained record, the file contains five increasing and five reducing f
 2. Open **Data Explorer** and explain the 11.39% positive class.
 3. Open **Model Performance** and compare 0.50 with 0.45.
 4. Open **Risk Insights** and identify the strongest global drivers.
-5. Open **Application Validation** and show the 108 of 108 passed checks.
+5. Open **Application Validation**, show the 108 of 108 passed checks, and demonstrate the validation-area filter.
 6. Open **New Prediction**.
 7. Select **Use Sample Record**.
 8. Review the five guided steps.
@@ -360,6 +374,13 @@ The finalized interface includes the following completed updates:
 - updated sidebar project branding
 - removal of duplicated Overview disclaimer text
 - responsive layout support for smaller screens
+- removal of visible internal source paths from user-facing pages
+- user-friendly Saved Figures labels instead of technical filenames
+- Model Development tabs reordered to Modeling Notes, Key Metrics, and Confusion Counts
+- permanently visible, scrollable 108-check validation checklist
+- validation-area checklist filter
+- one consistent validation `Status` column where applicable
+- green `✅ PASSED` and red `❌ FAILED` status indicators
 
 These updates changed presentation and navigation only. The model, preprocessing, thresholds, prediction service, explanations, downloads, and input workflows remain the finalized versions described in this guide.
 
@@ -431,7 +452,7 @@ Downloadable Outputs: 28 of 28 passed
 Application Structure: 25 of 25 passed
 ```
 
-The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs. It also confirmed the professional Overview hero, four factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
+The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs. It also confirmed the professional Overview hero, four factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, user-friendly saved-figure labels, removal of visible internal source paths, reordered Model Development tabs, the validation-area checklist filter, and consistent colored validation statuses.
 
 ## Final Reminder
 

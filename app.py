@@ -1561,6 +1561,36 @@ def format_patient_value(
     return str(patient_value)
 
 
+def validation_value_passed(value) -> bool:
+    """Return a reliable boolean for a saved validation value."""
+
+    if isinstance(value, bool):
+        return value
+
+    if pd.isna(value):
+        return False
+
+    normalized_value = str(value).strip().lower()
+
+    if normalized_value in {"true", "1", "yes", "passed"}:
+        return True
+
+    if normalized_value in {"false", "0", "no", "failed"}:
+        return False
+
+    return bool(value)
+
+
+def validation_status_label(value) -> str:
+    """Return one consistent user-facing validation status."""
+
+    return (
+        "✅ PASSED"
+        if validation_value_passed(value)
+        else "❌ FAILED"
+    )
+
+
 def find_threshold_row(
     final_results: pd.DataFrame,
     threshold: float,
@@ -1790,7 +1820,7 @@ def render_project_overview() -> None:
         render_overview_fact_card(
             "Application Validation",
             validation_display,
-            "Notebook 09 checks passed",
+            "Application quality checks passed",
             icon="validation",
             details=[
                 "100.00% validation pass rate",
@@ -2127,10 +2157,6 @@ def render_dataset_summary() -> None:
                 icon="✓",
             )
 
-        st.caption(
-            "Source: data/processed/diabetic_modeling_data_final.csv"
-        )
-
     except Exception as error:
         st.error("The dataset summary could not be calculated.")
         st.exception(error)
@@ -2205,15 +2231,51 @@ def render_model_development() -> None:
             tone="teal",
         )
 
-        tab1, tab2, tab3 = st.tabs(
+        notes_tab, metrics_tab, counts_tab = st.tabs(
             [
+                "Modeling Notes",
                 "Key Metrics",
                 "Confusion Counts",
-                "Modeling Notes",
             ]
         )
 
-        with tab1:
+        with notes_tab:
+            note_col1, note_col2, note_col3 = st.columns(3)
+
+            with note_col1:
+                render_info_card(
+                    "Baseline stage",
+                    (
+                        "Dummy and baseline models established reference "
+                        "performance and demonstrated that majority-class "
+                        "accuracy was not clinically useful."
+                    ),
+                    icon="1",
+                )
+
+            with note_col2:
+                render_info_card(
+                    "Candidate and tuning stage",
+                    (
+                        "Logistic regression, tree-based ensembles, boosting "
+                        "models, and class-imbalance strategies were compared "
+                        "using validation metrics."
+                    ),
+                    icon="2",
+                )
+
+            with note_col3:
+                render_info_card(
+                    "Threshold stage",
+                    (
+                        "The finalized model was evaluated at multiple "
+                        "operating thresholds to balance additional recall "
+                        "against increased false-positive review volume."
+                    ),
+                    icon="3",
+                )
+
+        with metrics_tab:
             key_columns = [
                 "Analysis Stage",
                 "Model",
@@ -2255,7 +2317,7 @@ def render_model_development() -> None:
                 },
             )
 
-        with tab2:
+        with counts_tab:
             st.dataframe(
                 comparison[
                     [
@@ -2271,47 +2333,6 @@ def render_model_development() -> None:
                 width="stretch",
                 height=520,
             )
-
-        with tab3:
-            note_col1, note_col2, note_col3 = st.columns(3)
-
-            with note_col1:
-                render_info_card(
-                    "Baseline stage",
-                    (
-                        "Dummy and baseline models established reference "
-                        "performance and demonstrated that majority-class "
-                        "accuracy was not clinically useful."
-                    ),
-                    icon="1",
-                )
-
-            with note_col2:
-                render_info_card(
-                    "Candidate and tuning stage",
-                    (
-                        "Logistic regression, tree-based ensembles, boosting "
-                        "models, and class-imbalance strategies were compared "
-                        "using validation metrics."
-                    ),
-                    icon="2",
-                )
-
-            with note_col3:
-                render_info_card(
-                    "Threshold stage",
-                    (
-                        "The finalized model was evaluated at multiple "
-                        "operating thresholds to balance additional recall "
-                        "against increased false-positive review volume."
-                    ),
-                    icon="3",
-                )
-
-        st.caption(
-            "Source: outputs/metrics/"
-            "dynamic_all_model_comparison_summary.csv"
-        )
 
     except Exception as error:
         st.error("The development comparison table could not be loaded.")
@@ -2460,11 +2481,6 @@ def render_final_evaluation() -> None:
                 },
             )
 
-        st.caption(
-            "Source: outputs/metrics/"
-            "notebook_7_final_threshold_comparison_table.csv"
-        )
-
     except Exception as error:
         st.error("The final test-set results could not be loaded.")
         st.exception(error)
@@ -2553,7 +2569,7 @@ def render_application_validation() -> None:
             render_metric_card(
                 "Total Checks",
                 f"{total_checks:,}",
-                note="Saved Notebook 09 checks",
+                note="Application quality checks",
                 icon="▦",
             )
 
@@ -2583,32 +2599,29 @@ def render_application_validation() -> None:
 
         if failed_checks == 0 and passed_checks == total_checks:
             render_key_message(
-                "Saved validation result: PASSED",
+                "Application validation result: PASSED",
                 (
-                    f"Notebook 09 completed {total_checks:,} checks. "
-                    f"All {passed_checks:,} checks passed and no failures "
-                    "were recorded in the saved validation evidence."
+                    f"All {passed_checks:,} of {total_checks:,} application "
+                    "quality checks passed, with no failures recorded."
                 ),
                 icon="✓",
                 tone="teal",
             )
         else:
             render_key_message(
-                "Saved validation result requires review",
+                "Application validation requires review",
                 (
-                    f"{failed_checks:,} of {total_checks:,} saved checks "
-                    "did not pass."
+                    f"{failed_checks:,} of {total_checks:,} application "
+                    "quality checks did not pass."
                 ),
                 icon="!",
                 tone="amber",
             )
 
         st.caption(
-            "These results were generated by "
-            "The notebooks/09_streamlit_application_validation.ipynb. "
-            "The final validation covers all eight application pages, "
-            "three prediction input methods, downloadable outputs, "
-            "input handling, prediction consistency, and deployment assets."
+            "The validation covers all eight application pages, three "
+            "prediction input methods, downloadable outputs, input handling, "
+            "prediction consistency, and deployment readiness."
         )
 
         st.markdown(
@@ -2739,7 +2752,11 @@ def render_application_validation() -> None:
 
             parity_passed = (
                 parity_results[parity_boolean_columns]
-                .astype(bool)
+                .apply(
+                    lambda column: column.map(
+                        validation_value_passed
+                    )
+                )
                 .all(axis=None)
             )
 
@@ -2754,8 +2771,16 @@ def render_application_validation() -> None:
                     "One or more prediction-parity checks require review."
                 )
 
+            parity_display = parity_results.copy()
+
+            for column in parity_boolean_columns:
+                parity_display[column] = (
+                    parity_display[column]
+                    .map(validation_status_label)
+                )
+
             st.dataframe(
-                parity_results,
+                parity_display,
                 hide_index=True,
                 width="stretch",
                 column_config={
@@ -2777,6 +2802,13 @@ def render_application_validation() -> None:
                             format="%.8f",
                         )
                     ),
+                    **{
+                        column: st.column_config.TextColumn(
+                            column,
+                            width="small",
+                        )
+                        for column in parity_boolean_columns
+                    },
                 },
             )
 
@@ -2795,11 +2827,31 @@ def render_application_validation() -> None:
                 "tests passed."
             )
 
+            input_validation_display = (
+                invalid_input_results.copy()
+            )
+
+            input_validation_display["Status"] = (
+                input_validation_display["Result"]
+                .map(validation_status_label)
+            )
+            input_validation_display = (
+                input_validation_display.drop(
+                    columns=["Result"]
+                )
+            )
+
             st.dataframe(
-                invalid_input_results,
+                input_validation_display,
                 hide_index=True,
                 width="stretch",
                 height=520,
+                column_config={
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
         with download_tab:
@@ -2817,11 +2869,33 @@ def render_application_validation() -> None:
                 "passed."
             )
 
+            download_display = download_results.copy()
+
+            download_display["Status"] = (
+                download_display["Result"]
+                .map(validation_status_label)
+            )
+            download_display = download_display.drop(
+                columns=["Result"]
+            )
+
             st.dataframe(
-                download_results,
+                download_display,
                 hide_index=True,
                 width="stretch",
                 height=460,
+                column_config={
+                    "Validation Check": (
+                        st.column_config.TextColumn(
+                            "Validation Check",
+                            width="large",
+                        )
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
         with structure_tab:
@@ -2841,16 +2915,37 @@ def render_application_validation() -> None:
                     f"{len(structure_checks):,} application-structure "
                     "checks passed."
                 )
+                structure_display = structure_checks[
+                    [
+                        "Validation Check",
+                        "Passed",
+                    ]
+                ].copy()
+
+                structure_display["Status"] = (
+                    structure_display["Passed"]
+                    .map(validation_status_label)
+                )
+                structure_display = structure_display.drop(
+                    columns=["Passed"]
+                )
+
                 st.dataframe(
-                    structure_checks[
-                        [
-                            "Validation Check",
-                            "Passed",
-                            "Result",
-                        ]
-                    ],
+                    structure_display,
                     hide_index=True,
                     width="stretch",
+                    column_config={
+                        "Validation Check": (
+                            st.column_config.TextColumn(
+                                "Validation Check",
+                                width="large",
+                            )
+                        ),
+                        "Status": st.column_config.TextColumn(
+                            "Status",
+                            width="small",
+                        ),
+                    },
                 )
 
         with figures_tab:
@@ -2864,49 +2959,126 @@ def render_application_validation() -> None:
 
             st.success(
                 f"{figure_passed:,} of "
-                f"{len(figure_results):,} approved figure files were found "
+                f"{len(figure_results):,} approved figures were available "
                 "and validated."
             )
 
+            figure_display = figure_results[
+                [
+                    "Figure Label",
+                    "Category",
+                    "Result",
+                ]
+            ].copy()
+
+            figure_display["Status"] = (
+                figure_display["Result"]
+                .map(validation_status_label)
+            )
+            figure_display = figure_display.drop(
+                columns=["Result"]
+            )
+
             st.dataframe(
-                figure_results,
+                figure_display,
                 hide_index=True,
                 width="stretch",
                 height=520,
+                column_config={
+                    "Figure Label": st.column_config.TextColumn(
+                        "Approved Figure",
+                        width="large",
+                    ),
+                    "Category": st.column_config.TextColumn(
+                        "Analysis Stage",
+                        width="medium",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
-        with st.expander(
-            f"View all {len(validation_checks):,} saved validation checks"
+        st.markdown(
+            '<div class="hr-section-title">'
+            'Complete Validation Checklist'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        with st.container(
+            border=True,
+            key="validation_checklist",
         ):
+            st.markdown(
+                f"#### All {len(validation_checks):,} quality checks"
+            )
+            st.caption(
+                "Use the filter to review one validation area or display "
+                "the complete checklist. The table remains scrollable."
+            )
+
+            validation_area_options = [
+                "All Validation Areas",
+                *step_summary["Validation Area"].astype(str).tolist(),
+            ]
+
             selected_validation_area = st.selectbox(
-                "Filter by validation area",
-                options=[
-                    "All Validation Areas",
-                    *step_summary["Validation Area"].tolist(),
-                ],
-                key="validation_area_filter",
+                "Filter checklist by validation area",
+                options=validation_area_options,
+                key="validation_checklist_area_filter",
             )
 
             if selected_validation_area == "All Validation Areas":
-                filtered_checks = validation_checks
+                checklist_rows = validation_checks.copy()
             else:
-                filtered_checks = validation_checks[
+                checklist_rows = validation_checks[
                     validation_checks["Validation Area"]
                     == selected_validation_area
-                ]
+                ].copy()
 
-            st.dataframe(
-                filtered_checks,
-                hide_index=True,
-                width="stretch",
-                height=600,
+            st.caption(
+                f"Showing {len(checklist_rows):,} of "
+                f"{len(validation_checks):,} quality checks."
             )
 
-        st.caption(
-            "Validation evidence sources: artifacts/"
-            "notebook_9_streamlit_validation_summary.json and "
-            "outputs/metrics/notebook_9_*.csv"
-        )
+            checklist_display = checklist_rows[
+                [
+                    "Validation Area",
+                    "Validation Check",
+                    "Passed",
+                ]
+            ].copy()
+
+            checklist_display["Status"] = (
+                checklist_display["Passed"]
+                .map(validation_status_label)
+            )
+            checklist_display = checklist_display.drop(
+                columns=["Passed"]
+            )
+
+            st.dataframe(
+                checklist_display,
+                hide_index=True,
+                width="stretch",
+                height=760,
+                column_config={
+                    "Validation Area": st.column_config.TextColumn(
+                        "Validation Area",
+                        width="medium",
+                    ),
+                    "Validation Check": st.column_config.TextColumn(
+                        "Validation Check",
+                        width="large",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
+            )
 
     except Exception as error:
         st.error("The saved application-validation evidence could not load.")
@@ -2942,7 +3114,12 @@ def render_saved_figures() -> None:
         if path.exists():
             available_figures[label] = {**information, "path": path}
         else:
-            missing_figures.append(information["filename"])
+            missing_figures.append(
+                {
+                    "label": label,
+                    "category": information["category"],
+                }
+            )
 
     if not available_figures:
         st.error("None of the approved saved figures could be found.")
@@ -3020,20 +3197,26 @@ def render_saved_figures() -> None:
             caption=selected_label,
             width="stretch",
         )
-        st.caption(
-            "Source: outputs/figures/"
-            f"{selected_figure['filename']}"
-        )
+    with st.expander("View all approved figures"):
+        grouped_figures: dict[str, list[str]] = {}
 
-    with st.expander("View all approved figure filenames"):
         for label, information in available_figures.items():
-            st.write(f"**{information['category']} — {label}**")
-            st.code(information["filename"], language=None)
+            grouped_figures.setdefault(
+                information["category"],
+                [],
+            ).append(label)
+
+        for category, figure_labels in grouped_figures.items():
+            st.markdown(f"#### {category}")
+            for figure_label in figure_labels:
+                st.markdown(f"- {figure_label}")
 
     if missing_figures:
-        with st.expander("View missing approved figures"):
-            for filename in missing_figures:
-                st.write(f"- `{filename}`")
+        with st.expander("View unavailable approved figures"):
+            for figure in missing_figures:
+                st.markdown(
+                    f"- {figure['category']} — {figure['label']}"
+                )
 
 
 def render_explainability() -> None:
@@ -3224,11 +3407,6 @@ def render_explainability() -> None:
                 ),
                 icon="R",
             )
-
-        st.caption(
-            "Source: outputs/metrics/"
-            "notebook_8_grouped_original_shap_importance.csv"
-        )
 
     except Exception as error:
         st.error("The explainability results could not be loaded.")

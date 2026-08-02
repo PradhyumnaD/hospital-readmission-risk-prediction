@@ -675,6 +675,24 @@ The final interface update also corrected:
 
 The model, preprocessing pipeline, thresholds, prediction service, SHAP logic, downloads, and remaining seven pages were not retrained or functionally changed by the visual redesign.
 
+### Final interface cleanup
+
+The final presentation cleanup also:
+
+- removed visible internal `Source:` paths from Data Explorer, Model Development, Model Performance, Risk Insights, Saved Figures, and Application Validation
+- changed Saved Figures from internal filenames to user-friendly figure names grouped by analysis stage
+- reordered the Model Development tabs to:
+  1. Modeling Notes
+  2. Key Metrics
+  3. Confusion Counts
+- replaced the collapsed validation-check expander with a permanently visible, scrollable checklist
+- added a validation-area filter while retaining access to all 108 checks
+- replaced duplicated `Passed` and `Result` columns with one `Status` column where applicable
+- standardized validation outcomes as `✅ PASSED` and `❌ FAILED`
+- kept internal filenames and paths in the repository for reproducibility without exposing them in the public interface
+
+Notebook 09 was updated for these interface requirements and rerun successfully with **108 passed, 0 failed, and a 100.00% pass rate**.
+
 ### Main application features
 
 - Professional light interface with a navy sidebar
@@ -689,6 +707,9 @@ The model, preprocessing pipeline, thresholds, prediction service, SHAP logic, d
 - Saved model-development, final-evaluation, and explainability figures
 - Global grouped SHAP driver table and chart
 - Application Validation dashboard backed by Notebook 09 evidence files
+- Complete 108-check validation checklist displayed directly on the page
+- Validation-area filter for reviewing one quality-assurance area at a time
+- Consistent validation status labels using `✅ PASSED` and `❌ FAILED`
 - Guided five-step single-record form
 - Explicit review confirmation before prediction
 - Automatic clearing of confirmation and prior results after input changes
@@ -715,6 +736,8 @@ The application includes approved figures from:
 - Model explainability
 
 Notebook 09 confirmed that the application defines **22 approved figures** and that **all 22 files are present**.
+
+The Saved Figures page presents user-friendly figure names grouped by analysis stage. Internal `.png` filenames and repository paths remain available in the project files for traceability but are not displayed in the user-facing interface.
 
 ## Prediction Workflows
 
@@ -1438,7 +1461,7 @@ outputs/metrics/notebook_9_approved_figure_validation.csv
 
 ### Main conclusion
 
-The finalized application passed all structural, prediction, explanation, input-validation, download, theme, validation-dashboard, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values. The refreshed checks also confirmed the professional Overview hero, factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
+The finalized application passed all structural, prediction, explanation, input-validation, download, theme, validation-dashboard, and deployment-asset checks. Direct entry and CSV upload produced identical outputs for identical values. The refreshed checks also confirmed the professional Overview hero, factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, user-friendly saved-figure labels, removal of visible internal source paths, the reordered Model Development tabs, the validation-area checklist filter, and consistent colored validation statuses.
 
 </details>
 
@@ -1542,8 +1565,12 @@ The eighth application page reads the saved Notebook 09 evidence files and displ
 - valid- and invalid-input tests
 - download validation
 - application-structure checks
-- approved-figure validation
-- all 108 detailed checks with validation-area filtering
+- approved-figure validation using readable figure labels
+- a permanently visible, scrollable checklist containing all 108 checks
+- a validation-area filter for reviewing one area or all checks
+- one consistent `Status` column using `✅ PASSED` and `❌ FAILED`
+
+Technical notebook, CSV, JSON, figure, and dataset source paths are kept in the repository but are not shown in the user-facing dashboard.
 
 ### Guided-form validation
 

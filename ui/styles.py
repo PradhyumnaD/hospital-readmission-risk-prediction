@@ -1659,6 +1659,53 @@ def apply_global_styles() -> None:
             }
         }
 
+
+        /* ---------------------------------------------------------
+           Professional validation checklist and figure index
+           --------------------------------------------------------- */
+        .st-key-validation_checklist {
+            padding: 1rem 1rem 0.75rem 1rem;
+            border-radius: 1rem;
+            background: var(--hr-surface);
+            box-shadow: var(--hr-shadow);
+        }
+
+        .st-key-validation_checklist h4 {
+            margin-top: 0;
+            margin-bottom: 0.15rem;
+            color: var(--hr-text);
+            font-size: 1rem;
+        }
+
+        .st-key-validation_checklist
+        [data-testid="stCaptionContainer"] {
+            margin-bottom: 0.55rem;
+        }
+
+        .st-key-validation_checklist
+        [data-testid="stDataFrame"] {
+            border: 1px solid var(--hr-border);
+            border-radius: 0.8rem;
+            overflow: hidden;
+        }
+
+        [data-testid="stExpander"] h4 {
+            color: var(--hr-teal-dark);
+            font-size: 0.88rem;
+            margin-top: 0.8rem;
+            margin-bottom: 0.3rem;
+        }
+
+        [data-testid="stExpander"] ul {
+            margin-top: 0.25rem;
+            margin-bottom: 0.7rem;
+        }
+
+        [data-testid="stExpander"] li {
+            color: var(--hr-muted);
+            line-height: 1.5;
+        }
+
         </style>
         """,
         unsafe_allow_html=True,
