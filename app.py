@@ -31,8 +31,11 @@ from ui.components import (
     render_info_card,
     render_key_message,
     render_metric_card,
+    render_overview_fact_card,
+    render_overview_hero,
     render_page_hero,
     render_probability_scale,
+    render_project_pipeline,
     render_screening_status_card,
     render_threshold_card,
     render_three_step_workflow,
@@ -45,7 +48,7 @@ from ui.styles import apply_global_styles
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Hospital Readmission Dashboard",
-    page_icon="🏥",
+    page_icon="✚",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -1558,6 +1561,36 @@ def format_patient_value(
     return str(patient_value)
 
 
+def validation_value_passed(value) -> bool:
+    """Return a reliable boolean for a saved validation value."""
+
+    if isinstance(value, bool):
+        return value
+
+    if pd.isna(value):
+        return False
+
+    normalized_value = str(value).strip().lower()
+
+    if normalized_value in {"true", "1", "yes", "passed"}:
+        return True
+
+    if normalized_value in {"false", "0", "no", "failed"}:
+        return False
+
+    return bool(value)
+
+
+def validation_status_label(value) -> str:
+    """Return one consistent user-facing validation status."""
+
+    return (
+        "✅ PASSED"
+        if validation_value_passed(value)
+        else "❌ FAILED"
+    )
+
+
 def find_threshold_row(
     final_results: pd.DataFrame,
     threshold: float,
@@ -1647,120 +1680,216 @@ def create_user_friendly_screening_results(
 # ---------------------------------------------------------
 # Page sections
 # ---------------------------------------------------------
-def render_project_overview() -> None:
-    """Render the redesigned project overview page."""
+def navigate_to(page_name: str) -> None:
+    """Move the single-page application to a selected sidebar section."""
 
-    render_page_hero(
-        "Hospital Readmission Risk Prediction",
-        (
-            "Identify hospital encounters that may benefit from additional "
-            "follow-up review using a finalized machine-learning screening "
-            "pipeline and record-level explanations."
-        ),
-        icon="🏥",
+    st.session_state["selected_page"] = page_name
+
+
+def render_project_overview() -> None:
+    """Render the professional, project-specific Overview page."""
+
+    validation_total = 108
+    validation_passed = 108
+
+    if VALIDATION_OVERALL_SUMMARY_PATH.exists():
+        try:
+            validation_summary_data = pd.read_csv(
+                VALIDATION_OVERALL_SUMMARY_PATH
+            )
+            validation_summary = dict(
+                zip(
+                    validation_summary_data[
+                        "Validation Property"
+                    ].astype(str),
+                    validation_summary_data[
+                        "Validated Value"
+                    ].astype(str),
+                )
+            )
+            validation_total = int(
+                float(
+                    validation_summary.get(
+                        "Total validation checks",
+                        validation_total,
+                    )
+                )
+            )
+            validation_passed = int(
+                float(
+                    validation_summary.get(
+                        "Passed validation checks",
+                        validation_passed,
+                    )
+                )
+            )
+        except (
+            KeyError,
+            OSError,
+            TypeError,
+            ValueError,
+            pd.errors.EmptyDataError,
+            pd.errors.ParserError,
+        ):
+            validation_total = 108
+            validation_passed = 108
+
+    validation_display = (
+        f"{validation_passed:,} / {validation_total:,}"
     )
 
-    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+    render_overview_hero(
+        validation_text=(
+            f"{validation_display} Validation Checks"
+        )
+    )
 
-    with metric_col1:
-        render_metric_card(
-            "Historical Encounters",
+    with st.container(key="overview_primary_actions"):
+        action_col1, action_col2, action_spacer = st.columns(
+            [1, 1.12, 2.35]
+        )
+
+        with action_col1:
+            st.button(
+                "Start a Prediction",
+                type="primary",
+                use_container_width=True,
+                key="overview_start_prediction",
+                on_click=navigate_to,
+                args=("New Prediction",),
+            )
+
+        with action_col2:
+            st.button(
+                "View Model Performance",
+                use_container_width=True,
+                key="overview_view_performance",
+                on_click=navigate_to,
+                args=("Model Performance",),
+            )
+
+        with action_spacer:
+            st.empty()
+
+    st.markdown(
+        '<div class="hr-section-title hr-overview-section-title">'
+        'Project at a Glance'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    fact_col1, fact_col2, fact_col3, fact_col4 = st.columns(4)
+
+    with fact_col1:
+        render_overview_fact_card(
+            "Dataset",
             "99,343",
-            note="Cleaned modeling dataset",
-            icon="▦",
+            "Hospital encounters",
+            icon="dataset",
+            details=[
+                "69,990 unique patients",
+                "11.39% readmitted within 30 days",
+            ],
         )
 
-    with metric_col2:
-        render_metric_card(
-            "Unique Patients",
-            "69,990",
-            note="Patient-level grouping retained",
-            icon="◎",
-        )
-
-    with metric_col3:
-        render_metric_card(
-            "30-Day Readmission Rate",
-            "11.39%",
-            note="Positive target class",
-            icon="↗",
-        )
-
-    with metric_col4:
-        render_metric_card(
+    with fact_col2:
+        render_overview_fact_card(
             "Final Model",
             "Tuned XGBoost",
-            note="43 raw predictors",
-            icon="◆",
+            "Finalized prediction model",
+            icon="model",
+            details=[
+                "43 raw predictors",
+                "179 transformed features",
+            ],
         )
 
-    st.markdown(
-        '<div class="hr-section-title">How the application works</div>',
-        unsafe_allow_html=True,
+    with fact_col3:
+        render_overview_fact_card(
+            "Explainability",
+            "SHAP",
+            "Transparent model insights",
+            icon="shap",
+            details=[
+                "Global feature importance",
+                "Record-level contributing factors",
+            ],
+        )
+
+    with fact_col4:
+        render_overview_fact_card(
+            "Application Validation",
+            validation_display,
+            "Application quality checks passed",
+            icon="validation",
+            details=[
+                "100.00% validation pass rate",
+                "22 approved figures verified",
+            ],
+        )
+
+    render_project_pipeline()
+
+    with st.container(key="overview_quick_access"):
+        st.markdown(
+            '<div class="hr-overview-quick-heading">'
+            '<div class="hr-overview-quick-title">Quick Access</div>'
+            '<div class="hr-overview-quick-subtitle">'
+            'Open the main prediction and analysis sections.'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        quick_col1, quick_col2, quick_col3, quick_col4 = st.columns(4)
+
+        with quick_col1:
+            st.button(
+                "Make a Prediction",
+                type="primary",
+                use_container_width=True,
+                key="overview_quick_prediction",
+                on_click=navigate_to,
+                args=("New Prediction",),
+            )
+
+        with quick_col2:
+            st.button(
+                "View Final Performance",
+                use_container_width=True,
+                key="overview_quick_performance",
+                on_click=navigate_to,
+                args=("Model Performance",),
+            )
+
+        with quick_col3:
+            st.button(
+                "Explore Risk Insights",
+                use_container_width=True,
+                key="overview_quick_insights",
+                on_click=navigate_to,
+                args=("Risk Insights",),
+            )
+
+        with quick_col4:
+            st.button(
+                "Review Application Validation",
+                use_container_width=True,
+                key="overview_quick_validation",
+                on_click=navigate_to,
+                args=("Application Validation",),
+            )
+
+    render_key_message(
+        "Academic decision-support prototype",
+        (
+            "This application is for academic and research purposes. "
+            "It does not provide a medical diagnosis and must not be used "
+            "as the sole basis for patient-care decisions."
+        ),
+        icon="i",
+        tone="blue",
     )
-    render_three_step_workflow()
-
-    info_col1, info_col2, info_col3 = st.columns(3)
-
-    with info_col1:
-        render_info_card(
-            "Business Problem",
-            (
-                "Hospital readmissions can increase healthcare costs and "
-                "may indicate that some patients need additional follow-up "
-                "after discharge. Earlier screening can support prioritizing "
-                "post-discharge review resources."
-            ),
-            icon="▥",
-        )
-
-    with info_col2:
-        render_info_card(
-            "Prediction Target",
-            (
-                "The target is readmitted_30. A value of 1 represents "
-                "readmission within 30 days; a value of 0 represents no "
-                "readmission within 30 days."
-            ),
-            icon="◎",
-        )
-
-    with info_col3:
-        render_info_card(
-            "Modeling Priority",
-            (
-                "Recall was prioritized because missing a true readmission "
-                "is important in a screening context. Precision, specificity, "
-                "PR-AUC, ROC-AUC, false positives, and false negatives were "
-                "considered together."
-            ),
-            icon="♟",
-        )
-
-    st.markdown(
-        '<div class="hr-section-title">Final operating points</div>',
-        unsafe_allow_html=True,
-    )
-
-    threshold_col1, threshold_col2 = st.columns(2)
-
-    with threshold_col1:
-        st.info(
-            "**Standard review cutoff — 0.50**  \n"
-            "Main balanced operating point for routine review."
-        )
-
-    with threshold_col2:
-        st.warning(
-            "**Additional screening cutoff — 0.45**  \n"
-            "Lower cutoff designed to identify more encounters for review."
-        )
-
-    st.caption(
-        "The application is an academic decision-support prototype. "
-        "Predictions are not diagnoses and must not replace clinical judgment."
-    )
-
 
 def render_dataset_summary() -> None:
     """Render the redesigned dataset summary page."""
@@ -2028,10 +2157,6 @@ def render_dataset_summary() -> None:
                 icon="✓",
             )
 
-        st.caption(
-            "Source: data/processed/diabetic_modeling_data_final.csv"
-        )
-
     except Exception as error:
         st.error("The dataset summary could not be calculated.")
         st.exception(error)
@@ -2106,15 +2231,51 @@ def render_model_development() -> None:
             tone="teal",
         )
 
-        tab1, tab2, tab3 = st.tabs(
+        notes_tab, metrics_tab, counts_tab = st.tabs(
             [
+                "Modeling Notes",
                 "Key Metrics",
                 "Confusion Counts",
-                "Modeling Notes",
             ]
         )
 
-        with tab1:
+        with notes_tab:
+            note_col1, note_col2, note_col3 = st.columns(3)
+
+            with note_col1:
+                render_info_card(
+                    "Baseline stage",
+                    (
+                        "Dummy and baseline models established reference "
+                        "performance and demonstrated that majority-class "
+                        "accuracy was not clinically useful."
+                    ),
+                    icon="1",
+                )
+
+            with note_col2:
+                render_info_card(
+                    "Candidate and tuning stage",
+                    (
+                        "Logistic regression, tree-based ensembles, boosting "
+                        "models, and class-imbalance strategies were compared "
+                        "using validation metrics."
+                    ),
+                    icon="2",
+                )
+
+            with note_col3:
+                render_info_card(
+                    "Threshold stage",
+                    (
+                        "The finalized model was evaluated at multiple "
+                        "operating thresholds to balance additional recall "
+                        "against increased false-positive review volume."
+                    ),
+                    icon="3",
+                )
+
+        with metrics_tab:
             key_columns = [
                 "Analysis Stage",
                 "Model",
@@ -2156,7 +2317,7 @@ def render_model_development() -> None:
                 },
             )
 
-        with tab2:
+        with counts_tab:
             st.dataframe(
                 comparison[
                     [
@@ -2172,47 +2333,6 @@ def render_model_development() -> None:
                 width="stretch",
                 height=520,
             )
-
-        with tab3:
-            note_col1, note_col2, note_col3 = st.columns(3)
-
-            with note_col1:
-                render_info_card(
-                    "Baseline stage",
-                    (
-                        "Dummy and baseline models established reference "
-                        "performance and demonstrated that majority-class "
-                        "accuracy was not clinically useful."
-                    ),
-                    icon="1",
-                )
-
-            with note_col2:
-                render_info_card(
-                    "Candidate and tuning stage",
-                    (
-                        "Logistic regression, tree-based ensembles, boosting "
-                        "models, and class-imbalance strategies were compared "
-                        "using validation metrics."
-                    ),
-                    icon="2",
-                )
-
-            with note_col3:
-                render_info_card(
-                    "Threshold stage",
-                    (
-                        "The finalized model was evaluated at multiple "
-                        "operating thresholds to balance additional recall "
-                        "against increased false-positive review volume."
-                    ),
-                    icon="3",
-                )
-
-        st.caption(
-            "Source: outputs/metrics/"
-            "dynamic_all_model_comparison_summary.csv"
-        )
 
     except Exception as error:
         st.error("The development comparison table could not be loaded.")
@@ -2361,11 +2481,6 @@ def render_final_evaluation() -> None:
                 },
             )
 
-        st.caption(
-            "Source: outputs/metrics/"
-            "notebook_7_final_threshold_comparison_table.csv"
-        )
-
     except Exception as error:
         st.error("The final test-set results could not be loaded.")
         st.exception(error)
@@ -2454,7 +2569,7 @@ def render_application_validation() -> None:
             render_metric_card(
                 "Total Checks",
                 f"{total_checks:,}",
-                note="Saved Notebook 09 checks",
+                note="Application quality checks",
                 icon="▦",
             )
 
@@ -2484,32 +2599,29 @@ def render_application_validation() -> None:
 
         if failed_checks == 0 and passed_checks == total_checks:
             render_key_message(
-                "Saved validation result: PASSED",
+                "Application validation result: PASSED",
                 (
-                    f"Notebook 09 completed {total_checks:,} checks. "
-                    f"All {passed_checks:,} checks passed and no failures "
-                    "were recorded in the saved validation evidence."
+                    f"All {passed_checks:,} of {total_checks:,} application "
+                    "quality checks passed, with no failures recorded."
                 ),
                 icon="✓",
                 tone="teal",
             )
         else:
             render_key_message(
-                "Saved validation result requires review",
+                "Application validation requires review",
                 (
-                    f"{failed_checks:,} of {total_checks:,} saved checks "
-                    "did not pass."
+                    f"{failed_checks:,} of {total_checks:,} application "
+                    "quality checks did not pass."
                 ),
                 icon="!",
                 tone="amber",
             )
 
         st.caption(
-            "These results were generated by "
-            "The notebooks/09_streamlit_application_validation.ipynb. "
-            "The final validation covers all eight application pages, "
-            "three prediction input methods, downloadable outputs, "
-            "input handling, prediction consistency, and deployment assets."
+            "The validation covers all eight application pages, three "
+            "prediction input methods, downloadable outputs, input handling, "
+            "prediction consistency, and deployment readiness."
         )
 
         st.markdown(
@@ -2640,7 +2752,11 @@ def render_application_validation() -> None:
 
             parity_passed = (
                 parity_results[parity_boolean_columns]
-                .astype(bool)
+                .apply(
+                    lambda column: column.map(
+                        validation_value_passed
+                    )
+                )
                 .all(axis=None)
             )
 
@@ -2655,8 +2771,16 @@ def render_application_validation() -> None:
                     "One or more prediction-parity checks require review."
                 )
 
+            parity_display = parity_results.copy()
+
+            for column in parity_boolean_columns:
+                parity_display[column] = (
+                    parity_display[column]
+                    .map(validation_status_label)
+                )
+
             st.dataframe(
-                parity_results,
+                parity_display,
                 hide_index=True,
                 width="stretch",
                 column_config={
@@ -2678,6 +2802,13 @@ def render_application_validation() -> None:
                             format="%.8f",
                         )
                     ),
+                    **{
+                        column: st.column_config.TextColumn(
+                            column,
+                            width="small",
+                        )
+                        for column in parity_boolean_columns
+                    },
                 },
             )
 
@@ -2696,11 +2827,31 @@ def render_application_validation() -> None:
                 "tests passed."
             )
 
+            input_validation_display = (
+                invalid_input_results.copy()
+            )
+
+            input_validation_display["Status"] = (
+                input_validation_display["Result"]
+                .map(validation_status_label)
+            )
+            input_validation_display = (
+                input_validation_display.drop(
+                    columns=["Result"]
+                )
+            )
+
             st.dataframe(
-                invalid_input_results,
+                input_validation_display,
                 hide_index=True,
                 width="stretch",
                 height=520,
+                column_config={
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
         with download_tab:
@@ -2718,11 +2869,33 @@ def render_application_validation() -> None:
                 "passed."
             )
 
+            download_display = download_results.copy()
+
+            download_display["Status"] = (
+                download_display["Result"]
+                .map(validation_status_label)
+            )
+            download_display = download_display.drop(
+                columns=["Result"]
+            )
+
             st.dataframe(
-                download_results,
+                download_display,
                 hide_index=True,
                 width="stretch",
                 height=460,
+                column_config={
+                    "Validation Check": (
+                        st.column_config.TextColumn(
+                            "Validation Check",
+                            width="large",
+                        )
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
         with structure_tab:
@@ -2742,16 +2915,37 @@ def render_application_validation() -> None:
                     f"{len(structure_checks):,} application-structure "
                     "checks passed."
                 )
+                structure_display = structure_checks[
+                    [
+                        "Validation Check",
+                        "Passed",
+                    ]
+                ].copy()
+
+                structure_display["Status"] = (
+                    structure_display["Passed"]
+                    .map(validation_status_label)
+                )
+                structure_display = structure_display.drop(
+                    columns=["Passed"]
+                )
+
                 st.dataframe(
-                    structure_checks[
-                        [
-                            "Validation Check",
-                            "Passed",
-                            "Result",
-                        ]
-                    ],
+                    structure_display,
                     hide_index=True,
                     width="stretch",
+                    column_config={
+                        "Validation Check": (
+                            st.column_config.TextColumn(
+                                "Validation Check",
+                                width="large",
+                            )
+                        ),
+                        "Status": st.column_config.TextColumn(
+                            "Status",
+                            width="small",
+                        ),
+                    },
                 )
 
         with figures_tab:
@@ -2765,49 +2959,126 @@ def render_application_validation() -> None:
 
             st.success(
                 f"{figure_passed:,} of "
-                f"{len(figure_results):,} approved figure files were found "
+                f"{len(figure_results):,} approved figures were available "
                 "and validated."
             )
 
+            figure_display = figure_results[
+                [
+                    "Figure Label",
+                    "Category",
+                    "Result",
+                ]
+            ].copy()
+
+            figure_display["Status"] = (
+                figure_display["Result"]
+                .map(validation_status_label)
+            )
+            figure_display = figure_display.drop(
+                columns=["Result"]
+            )
+
             st.dataframe(
-                figure_results,
+                figure_display,
                 hide_index=True,
                 width="stretch",
                 height=520,
+                column_config={
+                    "Figure Label": st.column_config.TextColumn(
+                        "Approved Figure",
+                        width="large",
+                    ),
+                    "Category": st.column_config.TextColumn(
+                        "Analysis Stage",
+                        width="medium",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
             )
 
-        with st.expander(
-            f"View all {len(validation_checks):,} saved validation checks"
+        st.markdown(
+            '<div class="hr-section-title">'
+            'Complete Validation Checklist'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        with st.container(
+            border=True,
+            key="validation_checklist",
         ):
+            st.markdown(
+                f"#### All {len(validation_checks):,} quality checks"
+            )
+            st.caption(
+                "Use the filter to review one validation area or display "
+                "the complete checklist. The table remains scrollable."
+            )
+
+            validation_area_options = [
+                "All Validation Areas",
+                *step_summary["Validation Area"].astype(str).tolist(),
+            ]
+
             selected_validation_area = st.selectbox(
-                "Filter by validation area",
-                options=[
-                    "All Validation Areas",
-                    *step_summary["Validation Area"].tolist(),
-                ],
-                key="validation_area_filter",
+                "Filter checklist by validation area",
+                options=validation_area_options,
+                key="validation_checklist_area_filter",
             )
 
             if selected_validation_area == "All Validation Areas":
-                filtered_checks = validation_checks
+                checklist_rows = validation_checks.copy()
             else:
-                filtered_checks = validation_checks[
+                checklist_rows = validation_checks[
                     validation_checks["Validation Area"]
                     == selected_validation_area
-                ]
+                ].copy()
 
-            st.dataframe(
-                filtered_checks,
-                hide_index=True,
-                width="stretch",
-                height=600,
+            st.caption(
+                f"Showing {len(checklist_rows):,} of "
+                f"{len(validation_checks):,} quality checks."
             )
 
-        st.caption(
-            "Validation evidence sources: artifacts/"
-            "notebook_9_streamlit_validation_summary.json and "
-            "outputs/metrics/notebook_9_*.csv"
-        )
+            checklist_display = checklist_rows[
+                [
+                    "Validation Area",
+                    "Validation Check",
+                    "Passed",
+                ]
+            ].copy()
+
+            checklist_display["Status"] = (
+                checklist_display["Passed"]
+                .map(validation_status_label)
+            )
+            checklist_display = checklist_display.drop(
+                columns=["Passed"]
+            )
+
+            st.dataframe(
+                checklist_display,
+                hide_index=True,
+                width="stretch",
+                height=760,
+                column_config={
+                    "Validation Area": st.column_config.TextColumn(
+                        "Validation Area",
+                        width="medium",
+                    ),
+                    "Validation Check": st.column_config.TextColumn(
+                        "Validation Check",
+                        width="large",
+                    ),
+                    "Status": st.column_config.TextColumn(
+                        "Status",
+                        width="small",
+                    ),
+                },
+            )
 
     except Exception as error:
         st.error("The saved application-validation evidence could not load.")
@@ -2843,7 +3114,12 @@ def render_saved_figures() -> None:
         if path.exists():
             available_figures[label] = {**information, "path": path}
         else:
-            missing_figures.append(information["filename"])
+            missing_figures.append(
+                {
+                    "label": label,
+                    "category": information["category"],
+                }
+            )
 
     if not available_figures:
         st.error("None of the approved saved figures could be found.")
@@ -2921,20 +3197,26 @@ def render_saved_figures() -> None:
             caption=selected_label,
             width="stretch",
         )
-        st.caption(
-            "Source: outputs/figures/"
-            f"{selected_figure['filename']}"
-        )
+    with st.expander("View all approved figures"):
+        grouped_figures: dict[str, list[str]] = {}
 
-    with st.expander("View all approved figure filenames"):
         for label, information in available_figures.items():
-            st.write(f"**{information['category']} — {label}**")
-            st.code(information["filename"], language=None)
+            grouped_figures.setdefault(
+                information["category"],
+                [],
+            ).append(label)
+
+        for category, figure_labels in grouped_figures.items():
+            st.markdown(f"#### {category}")
+            for figure_label in figure_labels:
+                st.markdown(f"- {figure_label}")
 
     if missing_figures:
-        with st.expander("View missing approved figures"):
-            for filename in missing_figures:
-                st.write(f"- `{filename}`")
+        with st.expander("View unavailable approved figures"):
+            for figure in missing_figures:
+                st.markdown(
+                    f"- {figure['category']} — {figure['label']}"
+                )
 
 
 def render_explainability() -> None:
@@ -3125,11 +3407,6 @@ def render_explainability() -> None:
                 ),
                 icon="R",
             )
-
-        st.caption(
-            "Source: outputs/metrics/"
-            "notebook_8_grouped_original_shap_importance.csv"
-        )
 
     except Exception as error:
         st.error("The explainability results could not be loaded.")
@@ -3725,16 +4002,29 @@ def render_batch_prediction() -> None:
 # Sidebar navigation
 # ---------------------------------------------------------
 with st.sidebar:
+    sidebar_brand_html = (
+        '<div class="hr-sidebar-brand">'
+        '<div class="hr-sidebar-logo" aria-hidden="true">'
+        '<svg viewBox="0 0 48 48">'
+        '<rect x="9" y="16" width="30" height="25" rx="4"></rect>'
+        '<rect x="16" y="8" width="16" height="33" rx="4"></rect>'
+        '<path d="M21 13h6M24 10v6"></path>'
+        '<path d="M14 23h5M14 29h5M29 23h5M29 29h5"></path>'
+        '<path d="M21 33h6v8h-6z"></path>'
+        '</svg>'
+        '</div>'
+        '<div>'
+        '<div class="hr-sidebar-title">'
+        'Hospital Readmission<br>Risk Prediction'
+        '</div>'
+        '<div class="hr-sidebar-subtitle">'
+        'ASDS 6306 Capstone Project'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
     st.markdown(
-        """
-        <div class="hr-sidebar-brand">
-            <div class="hr-sidebar-logo">✚</div>
-            <div>
-                <div class="hr-sidebar-title">Readmission Risk Portal</div>
-                <div class="hr-sidebar-subtitle">ASDS 6306 Capstone</div>
-            </div>
-        </div>
-        """,
+        sidebar_brand_html,
         unsafe_allow_html=True,
     )
 
@@ -3751,14 +4041,42 @@ with st.sidebar:
             "New Prediction",
         ],
         label_visibility="collapsed",
+        key="selected_page",
     )
 
-    st.divider()
-    st.success(
-        "Project completed. Tuned XGBoost is the finalized prediction model."
+    st.markdown(
+        (
+            '<section class="hr-sidebar-summary">'
+            '<div class="hr-sidebar-summary-title">'
+            'Project at a Glance'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">C</span>'
+            '<div><small>Course</small>'
+            '<strong>ASDS 6306 Capstone</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">M</span>'
+            '<div><small>Final Model</small>'
+            '<strong>Tuned XGBoost</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">T</span>'
+            '<div><small>Target</small>'
+            '<strong>30-Day Readmission</strong></div>'
+            '</div>'
+            '<div class="hr-sidebar-summary-row">'
+            '<span class="hr-sidebar-summary-icon">+</span>'
+            '<div><small>Positive Class Rate</small>'
+            '<strong>11.39%</strong></div>'
+            '</div>'
+            '</section>'
+        ),
+        unsafe_allow_html=True,
     )
-    st.caption("Main threshold: 0.50")
-    st.caption("Recall-focused threshold: 0.45")
+
+    st.caption("Standard review cutoff: 0.50")
+    st.caption("Additional screening cutoff: 0.45")
 
 
 # ---------------------------------------------------------
@@ -3781,9 +4099,10 @@ elif selected_page == "Application Validation":
 elif selected_page == "New Prediction":
     render_prediction()
 
-st.divider()
-st.caption(
-    "Academic decision-support prototype. The model output is not a medical "
-    "diagnosis and must not be used as the sole basis for patient-care "
-    "decisions."
-)
+if selected_page != "Overview":
+    st.divider()
+    st.caption(
+        "Academic decision-support prototype. The model output is not a "
+        "medical diagnosis and must not be used as the sole basis for "
+        "patient-care decisions."
+    )

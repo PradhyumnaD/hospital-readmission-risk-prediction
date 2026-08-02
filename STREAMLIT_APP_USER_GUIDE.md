@@ -27,15 +27,33 @@ The left sidebar contains eight pages:
 
 ### Overview
 
-Provides the project summary and key validated facts:
+Provides the redesigned professional project homepage.
 
-- 99,343 historical encounters
-- 69,990 unique patients
-- 11.39% 30-day readmission rate
-- 43 raw predictors
-- Tuned XGBoost final model
+The page includes:
+
+- a healthcare-themed hero section
+- a hospital and analytics illustration
+- direct actions for **Start a Prediction** and **View Model Performance**
+- four factual project cards:
+  - 99,343 historical encounters
+  - Tuned XGBoost final model
+  - SHAP explainability
+  - 108 of 108 validation checks passed
+- additional verified project facts:
+  - 69,990 unique patients
+  - 11.39% 30-day readmission rate
+  - 43 raw predictors
+  - 179 transformed features
+- a five-stage project pipeline
+- Quick Access actions for:
+  - New Prediction
+  - Model Performance
+  - Risk Insights
+  - Application Validation
 - standard review cutoff: 0.50
 - additional screening cutoff: 0.45
+
+The Overview uses saved project results and does not display fabricated patient counts, activity logs, clinical work queues, or other unsupported operational claims.
 
 ### Data Explorer
 
@@ -52,6 +70,12 @@ Shows:
 ### Model Development
 
 Displays baseline, candidate, tuned, and threshold-analysis configurations evaluated before the final untouched test assessment.
+
+The page tabs are presented in this order:
+
+1. **Modeling Notes**
+2. **Key Metrics**
+3. **Confusion Counts**
 
 Use this page to compare:
 
@@ -97,8 +121,8 @@ Global importance summarizes model behavior across many encounters. It does not 
 
 Displays the saved Notebook 09 quality-assurance evidence:
 
-- 98 total checks
-- 98 passed
+- 108 total checks
+- 108 passed
 - 0 failed
 - 100.00% pass rate
 - validation coverage by area
@@ -106,12 +130,21 @@ Displays the saved Notebook 09 quality-assurance evidence:
 - input-validation results
 - download-validation results
 - application-structure checks
-- approved-figure checks
-- all 98 detailed checks with filtering by validation area
+- professional Overview checks
+- approved-figure checks using readable figure names
+- a permanently visible, scrollable checklist of all 108 checks
+- a validation-area filter for reviewing one area or all checks
+- consistent status labels:
+  - `✅ PASSED`
+  - `❌ FAILED`
+
+The page does not display internal notebook, CSV, JSON, dataset, or figure paths.
 
 ### Saved Figures
 
 Select an analysis stage and figure from the dropdown menus. The validated application contains 22 approved figures and no missing files.
+
+The page shows user-friendly figure names grouped by analysis stage. Internal `.png` filenames and repository paths are not displayed in the public interface.
 
 ### New Prediction
 
@@ -317,7 +350,7 @@ For each explained record, the file contains five increasing and five reducing f
 2. Open **Data Explorer** and explain the 11.39% positive class.
 3. Open **Model Performance** and compare 0.50 with 0.45.
 4. Open **Risk Insights** and identify the strongest global drivers.
-5. Open **Application Validation** and show the 98 of 98 passed checks.
+5. Open **Application Validation**, show the 108 of 108 passed checks, and demonstrate the validation-area filter.
 6. Open **New Prediction**.
 7. Select **Use Sample Record**.
 8. Review the five guided steps.
@@ -328,7 +361,30 @@ For each explained record, the file contains five increasing and five reducing f
 13. Download the screening result and prediction factors.
 14. Demonstrate **Upload Multiple Records** using the sample CSV.
 
-## 10. Troubleshooting
+## 10. Interface Updates and Fixes
+
+The finalized interface includes the following completed updates:
+
+- professional Overview redesign
+- embedded hospital illustration
+- dynamic 108-of-108 validation display
+- corrected rendering so SVG and HTML code do not appear as visible text
+- improved spacing and alignment for the hero, cards, pipeline, and Quick Access section
+- working Overview navigation actions
+- updated sidebar project branding
+- removal of duplicated Overview disclaimer text
+- responsive layout support for smaller screens
+- removal of visible internal source paths from user-facing pages
+- user-friendly Saved Figures labels instead of technical filenames
+- Model Development tabs reordered to Modeling Notes, Key Metrics, and Confusion Counts
+- permanently visible, scrollable 108-check validation checklist
+- validation-area checklist filter
+- one consistent validation `Status` column where applicable
+- green `✅ PASSED` and red `❌ FAILED` status indicators
+
+These updates changed presentation and navigation only. The model, preprocessing, thresholds, prediction service, explanations, downloads, and input workflows remain the finalized versions described in this guide.
+
+## 11. Troubleshooting
 
 ### The CSV is rejected
 
@@ -363,7 +419,7 @@ Open the Streamlit app management page and review the logs. Confirm that the mod
 
 Reboot the Streamlit application from the management controls. Dependency changes may require a full rebuild.
 
-## 11. Formal Validation
+## 12. Formal Validation
 
 The final application was validated in:
 
@@ -375,8 +431,8 @@ Final result:
 
 ```text
 Validation steps completed: 6
-Total validation checks: 98
-Passed validation checks: 98
+Total validation checks: 108
+Passed validation checks: 108
 Failed validation checks: 0
 Overall validation rate: 100.00%
 Application pages: 8
@@ -393,10 +449,10 @@ Guided Form Configuration: 18 of 18 passed
 Prediction Parity: 7 of 7 passed
 Invalid-Input Handling: 18 of 18 passed
 Downloadable Outputs: 28 of 28 passed
-Application Structure: 15 of 15 passed
+Application Structure: 25 of 25 passed
 ```
 
-The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs. It also confirmed the eight-page navigation, confirmation workflow, readable factor downloads, and Application Validation dashboard.
+The validation confirmed that direct entry and CSV upload produce identical predictions, threshold decisions, and explanation-factor rankings for identical inputs. It also confirmed the professional Overview hero, four factual project cards, five-stage pipeline, six Overview navigation actions, responsive Overview styling, eight-page navigation, confirmation workflow, readable factor downloads, user-friendly saved-figure labels, removal of visible internal source paths, reordered Model Development tabs, the validation-area checklist filter, and consistent colored validation statuses.
 
 ## Final Reminder
 
